@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import { policyAPI, promotionAPI } from '../services/api'
+import { formatCurrency } from '../utils/formatters'
 import {
   Box,
   Typography,
@@ -28,16 +29,13 @@ import {
   Avatar,
   Divider,
   Grid,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Alert,
+  Drawer,
   CircularProgress as Spinner,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
-  Alert,
 } from '@mui/material'
 import {
   Search as SearchIcon,
@@ -57,6 +55,7 @@ import {
   VerifiedUser as VerifiedIcon,
   Fingerprint as NinIcon,
   Send as SendIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material'
 
 // Deleted POLICIES mock test payload
@@ -132,10 +131,10 @@ export default function Policies() {
         policy_holder_id: newPolicy.policy_holder_id,
         product_template_id: newPolicy.product_template_id,
         premium: parseFloat(newPolicy.premium),
-        start_date: newPolicy.start_date,
-        end_date: '2025-01-01', // mock
+        start_date: newPolicy.start_date || new Date().toISOString().split('T')[0],
+        end_date: new Date(new Date(newPolicy.start_date || new Date()).setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
         status: 'pending',
-        sales_channel: 'direct',
+        sales_channel: 'agent_assisted',
       }
       const pData = (await policyAPI.createPolicy(user.organization_id, payload)).data
       
@@ -148,7 +147,7 @@ export default function Policies() {
     onSuccess: () => {
       queryClient.invalidateQueries(['policies'])
       setCreateOpen(false)
-      setNewPolicy({ policy_holder_id: '', product_template_id: '', premium: '', start_date: '' })
+      setNewPolicy({ policy_holder_id: '', product_template_id: '', premium: '', start_date: new Date().toISOString().split('T')[0] })
       setCouponCode('')
       setCouponRes(null)
     }
@@ -234,6 +233,24 @@ export default function Policies() {
     },
   })
 
+  const { data: customers } = useQuery({
+    queryKey: ['customers', user?.organization_id],
+    queryFn: () => policyAPI.getOrganizationCustomerAccounts(user.organization_id),
+    enabled: !!user?.organization_id && createOpen
+  })
+
+  const { data: products } = useQuery({
+    queryKey: ['products-list', user?.organization_id],
+    queryFn: () => productAPI.getProducts(user.organization_id),
+    enabled: !!user?.organization_id && createOpen
+  })
+
+  const { data: templates } = useQuery({
+    queryKey: ['templates-list', user?.organization_id],
+    queryFn: () => productAPI.getProductTemplates(user.organization_id),
+    enabled: !!user?.organization_id && createOpen
+  })
+
   const { data, isLoading: loading } = useQuery({
     queryKey: ['policies', user?.organization_id, page, statusFilter, search],
     queryFn: async () => {
@@ -245,14 +262,12 @@ export default function Policies() {
         if (statusFilter === 'Awaiting Approval') params.status = 'documentation_review'
         else params.status = statusFilter.toLowerCase()
       }
-      // Note: Search filters would normally go here if supported by FastAPI endpoint
       const res = await policyAPI.getPolicies(user.organization_id, params)
       return res.data
     },
     enabled: !!user?.organization_id
   })
 
-  // Since actual Policies have real backend schema mappings:
   const paginated = data?.items || []
   const totalItems = data?.total || 0
 
@@ -409,14 +424,19 @@ export default function Policies() {
                               <PolicyIcon sx={{ fontSize: 16, color: '#BDC1C6' }} />
                             )}
                           </Box>
-                          <Typography sx={{ fontSize: '0.82rem', color: '#5F6368', fontWeight: 600 }}>
-                            {p.product_info?.name || p.product_template_id}
-                          </Typography>
+                          <Box>
+                            <Typography sx={{ fontSize: '0.82rem', color: '#202124', fontWeight: 700 }}>
+                              {p.product_info?.name || p.product_template_id}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.65rem', color: '#5F6368', fontWeight: 600, display: 'block' }}>
+                              Template: {p.template_info?.name || 'Standard'}
+                            </Typography>
+                          </Box>
                         </Box>
                       </TableCell>
                       <TableCell>
                         <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#202124' }}>
-                          UGX {Number(p.premium).toLocaleString()}
+                          {formatCurrency(p.premium, p.currency)}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -561,348 +581,418 @@ export default function Policies() {
         </MenuItem>
       </Menu>
 
-      {/* New Policy Dialog */}
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
-        <DialogTitle sx={{ fontWeight: 800, pt: 3 }}>Issue New Policy</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField fullWidth label="Policyholder ID" value={newPolicy.policy_holder_id} onChange={e => setNewPolicy(n => ({...n, policy_holder_id: e.target.value}))} />
+      {/* New Policy Drawer */}
+      <Drawer 
+        anchor="right" 
+        open={createOpen} 
+        onClose={() => setCreateOpen(false)}
+        PaperProps={{
+          sx: { width: { xs: '100%', sm: 500 }, border: 'none', boxShadow: '-8px 0 32px rgba(0,0,0,0.1)' }
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Drawer Header */}
+          <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E8EAED' }}>
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>Issue New Policy</Typography>
+            <IconButton onClick={() => setCreateOpen(false)} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          {/* Drawer Content */}
+          <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <TextField select fullWidth label="Policyholder" value={newPolicy.policy_holder_id} onChange={e => setNewPolicy(n => ({...n, policy_holder_id: e.target.value}))} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}>
+                  {(customers?.data || []).map(c => (
+                    <MenuItem key={c.id} value={c.id}>{c.full_name} ({c.email})</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField select fullWidth label="Product Template" value={newPolicy.product_template_id} onChange={e => {
+                  const t = (templates?.data?.items || []).find(item => item.id === e.target.value);
+                  setNewPolicy(n => ({...n, product_template_id: e.target.value, premium: t?.base_premium || ''}));
+                }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}>
+                  {(templates?.data?.items || []).map(t => (
+                    <MenuItem key={t.id} value={t.id}>{t.name} (Code: {t.code || 'N/A'})</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth label="Premium" type="number" value={newPolicy.premium} onChange={e => { setNewPolicy(n => ({...n, premium: e.target.value})); setCouponRes(null); }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth label="Start Date" type="date" InputLabelProps={{ shrink: true }} value={newPolicy.start_date} onChange={e => setNewPolicy(n => ({...n, start_date: e.target.value}))} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+              </Grid>
+              
+              {/* Coupon Field */}
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                <Typography sx={{ mb: 1.5, fontWeight: 700, fontSize: '0.85rem', color: '#202124' }}>Redeem Promotional Coupon</Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <TextField fullWidth size="small" placeholder="Enter coupon code" value={couponCode} onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponRes(null); }} disabled={!newPolicy.premium} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                  <Button variant="outlined" onClick={validateCoupon} disabled={!couponCode || !newPolicy.premium || validatingCoupon} sx={{ borderRadius: 2, fontWeight: 700 }}>
+                    {validatingCoupon ? <Spinner size={20} /> : 'Apply'}
+                  </Button>
+                </Box>
+                {couponRes && (
+                  <Box sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: couponRes.valid ? '#E6F4EA' : '#FCE8E6', color: couponRes.valid ? '#1E8E3E' : '#D93025', border: `1px solid ${couponRes.valid ? '#34A853' : '#EA4335'}` }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{couponRes.message}</Typography>
+                    {couponRes.valid && (
+                      <Typography sx={{ fontSize: '0.8rem', mt: 0.5, color: '#5F6368', fontWeight: 500 }}>
+                        Discount: {formatCurrency(couponRes.discount_amount, newPolicy.currency)} | Final Premium: <b>{formatCurrency(couponRes.final_premium, newPolicy.currency)}</b>
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+              </Grid>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField fullWidth label="Product ID" value={newPolicy.product_template_id} onChange={e => setNewPolicy(n => ({...n, product_template_id: e.target.value}))} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField fullWidth label="Premium (UGX)" type="number" value={newPolicy.premium} onChange={e => { setNewPolicy(n => ({...n, premium: e.target.value})); setCouponRes(null); }} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField fullWidth label="Start Date" type="date" InputLabelProps={{ shrink: true }} value={newPolicy.start_date} onChange={e => setNewPolicy(n => ({...n, start_date: e.target.value}))} />
-            </Grid>
-            
-            {/* Coupon Field */}
-            <Grid item xs={12}>
-              <Divider sx={{ my: 1 }} />
-              <Typography sx={{ mb: 1, fontWeight: 600, fontSize: '0.85rem' }}>Got a Promo Code?</Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField fullWidth size="small" placeholder="Enter coupon code" value={couponCode} onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponRes(null); }} disabled={!newPolicy.premium} />
-                <Button variant="outlined" onClick={validateCoupon} disabled={!couponCode || !newPolicy.premium || validatingCoupon}>
-                  {validatingCoupon ? <Spinner size={20} /> : 'Apply'}
-                </Button>
+          </Box>
+
+          {/* Drawer Footer */}
+          <Box sx={{ p: 3, borderTop: '1px solid #E8EAED', display: 'flex', gap: 2 }}>
+            <Button fullWidth variant="outlined" onClick={() => setCreateOpen(false)} sx={{ borderRadius: 2, py: 1.25, fontWeight: 600 }}>Cancel</Button>
+            <Button fullWidth variant="contained" onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !newPolicy.premium || !newPolicy.policy_holder_id} sx={{ borderRadius: 2, py: 1.25, fontWeight: 700 }}>
+              {createMutation.isPending ? <Spinner size={20} color="inherit" /> : 'Issue Policy'}
+            </Button>
+          </Box>
+        </Box>
+      </Drawer>
+
+      {/* DOCUMENT COMPLIANCE DRAWER */}
+      <Drawer
+        anchor="right"
+        open={docModalOpen}
+        onClose={() => setDocModalOpen(false)}
+        PaperProps={{
+          sx: { width: { xs: '100%', sm: 500 }, border: 'none', boxShadow: '-8px 0 32px rgba(0,0,0,0.1)' }
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Drawer Header */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#F8F9FA', p: 3, borderBottom: '1px solid #E8EAED' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <SecurityIcon color="primary" />
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 800 }}>Document Compliance Gate</Typography>
+                <Typography variant="body2" sx={{ color: '#5F6368' }}>{selectedPolicyForDocs?.policy_number}</Typography>
               </Box>
-              {couponRes && (
-                <Box sx={{ mt: 1, p: 1.5, borderRadius: 2, bgcolor: couponRes.valid ? '#E6F4EA' : '#FCE8E6', color: couponRes.valid ? '#1E8E3E' : '#D93025' }}>
-                  <Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>{couponRes.message}</Typography>
-                  {couponRes.valid && (
-                    <Typography sx={{ fontSize: '0.8rem', mt: 0.5, color: '#5F6368' }}>
-                      Discount: UGX {couponRes.discount_amount} | Final Premium: <b>UGX {couponRes.final_premium}</b>
+            </Box>
+            <IconButton onClick={() => setDocModalOpen(false)} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          {/* Drawer Content */}
+          <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              
+              {/* 0. PLATFORM VERIFIED IDENTITY */}
+              {selectedPolicyForDocs?.holder_info && (
+                <Box sx={{ p: 2.5, borderRadius: 3, bgcolor: '#F1F3F4', border: '1px solid #DADCE0' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <VerifiedIcon sx={{ color: '#34A853', fontSize: 20 }} />
+                    <Typography variant="subtitle2" sx={{ fontWeight: 900, color: '#202124' }}>
+                      Platform-Verified Consumer Identity
                     </Typography>
+                  </Box>
+                  
+                  <Grid container spacing={3}>
+                    <Grid item xs={12}>
+                      <Typography sx={{ fontSize: '0.65rem', color: '#5F6368', fontWeight: 700, textTransform: 'uppercase', mb: 0.5 }}>Full Name</Typography>
+                      <Typography sx={{ fontSize: '1rem', fontWeight: 800 }}>
+                        {selectedPolicyForDocs.holder_info.first_name} {selectedPolicyForDocs.holder_info.last_name}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography sx={{ fontSize: '0.65rem', color: '#5F6368', fontWeight: 700, textTransform: 'uppercase', mb: 0.5 }}>KYC Status</Typography>
+                      <Chip 
+                        label={selectedPolicyForDocs.holder_info.kyc_status?.toUpperCase()} 
+                        size="small" 
+                        color={selectedPolicyForDocs.holder_info.kyc_status === 'approved' ? 'success' : 'warning'}
+                        sx={{ height: 22, fontSize: '0.7rem', fontWeight: 800, borderRadius: 1.5 }}
+                      />
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                        <NinIcon sx={{ fontSize: 13, color: '#5F6368' }} />
+                        <Typography sx={{ fontSize: '0.65rem', color: '#5F6368', fontWeight: 700, textTransform: 'uppercase' }}>National ID / NIN</Typography>
+                      </Box>
+                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, fontFamily: 'monospace' }}>
+                        {selectedPolicyForDocs.holder_info.kyc_details?.nin || 'Not Provided'}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+
+                  {selectedPolicyForDocs.holder_info.kyc_details?.documents && (
+                    <Box sx={{ mt: 3 }}>
+                      <Typography sx={{ fontSize: '0.65rem', color: '#5F6368', fontWeight: 700, textTransform: 'uppercase', mb: 1.5 }}>Identity Artifacts</Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {selectedPolicyForDocs.holder_info.kyc_details.documents.map((doc, idx) => (
+                          <Button 
+                            key={idx}
+                            size="small" 
+                            variant="outlined" 
+                            sx={{ fontSize: '0.65rem', py: 0.25, borderRadius: 1.5, textTransform: 'none', fontWeight: 600 }}
+                          >
+                            View {doc.document_type?.replace(/_/g, ' ')}
+                          </Button>
+                        ))}
+                      </Box>
+                    </Box>
                   )}
                 </Box>
               )}
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !newPolicy.premium || !newPolicy.policy_holder_id}>
-            {createMutation.isPending ? <Spinner size={20} color="inherit" /> : 'Issue Policy'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* DOCUMENT COMPLIANCE MODAL */}
-      <Dialog open={docModalOpen} onClose={() => setDocModalOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2, bgcolor: '#F8F9FA' }}>
-          <SecurityIcon color="primary" />
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>Document Compliance Gate</Typography>
-            <Typography variant="body2" sx={{ color: '#5F6368' }}>{selectedPolicyForDocs?.policy_number}</Typography>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            
-            {/* 0. PLATFORM VERIFIED IDENTITY (Enriched from global users collection) */}
-            {selectedPolicyForDocs?.holder_info && (
-              <Box sx={{ p: 2, borderRadius: 2, bgcolor: '#F1F3F4', border: '1px solid #DADCE0' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                  <VerifiedIcon sx={{ color: '#34A853', fontSize: 20 }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#202124' }}>
-                    Platform-Verified Consumer Identity
-                  </Typography>
-                </Box>
-                
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <Typography sx={{ fontSize: '0.7rem', color: '#5F6368', fontWeight: 600, textTransform: 'uppercase' }}>Full Name</Typography>
-                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 700 }}>
-                      {selectedPolicyForDocs.holder_info.first_name} {selectedPolicyForDocs.holder_info.last_name}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography sx={{ fontSize: '0.7rem', color: '#5F6368', fontWeight: 600, textTransform: 'uppercase' }}>KYC Status</Typography>
-                    <Chip 
-                      label={selectedPolicyForDocs.holder_info.kyc_status?.toUpperCase()} 
-                      size="small" 
-                      color={selectedPolicyForDocs.holder_info.kyc_status === 'approved' ? 'success' : 'warning'}
-                      sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }}
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <NinIcon sx={{ fontSize: 14, color: '#5F6368' }} />
-                      <Typography sx={{ fontSize: '0.7rem', color: '#5F6368', fontWeight: 600, textTransform: 'uppercase' }}>NIN</Typography>
-                    </Box>
-                    <Typography sx={{ fontSize: '0.85rem', fontFamily: 'monospace' }}>
-                      {selectedPolicyForDocs.holder_info.kyc_details?.nin || 'Not Provided'}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography sx={{ fontSize: '0.7rem', color: '#5F6368', fontWeight: 600, textTransform: 'uppercase' }}>TIN</Typography>
-                    <Typography sx={{ fontSize: '0.85rem', fontFamily: 'monospace' }}>
-                      {selectedPolicyForDocs.holder_info.kyc_details?.tin || 'Not Provided'}
-                    </Typography>
-                  </Grid>
-                </Grid>
-
-                {selectedPolicyForDocs.holder_info.kyc_details?.documents && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography sx={{ fontSize: '0.7rem', color: '#5F6368', fontWeight: 600, textTransform: 'uppercase', mb: 1 }}>Verified Identity Documents</Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {selectedPolicyForDocs.holder_info.kyc_details.documents.map((doc, idx) => (
-                        <Button 
-                          key={idx}
-                          size="small" 
-                          variant="outlined" 
-                          sx={{ fontSize: '0.65rem', py: 0, height: 24, borderRadius: 1 }}
-                        >
-                          View {doc.document_type?.replace(/_/g, ' ')}
-                        </Button>
-                      ))}
-                    </Box>
-                  </Box>
-                )}
-              </Box>
-            )}
-            
-            {/* 1. DOWNLOAD SECTION */}
-            <Box sx={{ p: 2, borderRadius: 2, border: '1px solid #E8EAED', bgcolor: '#FDFDFD' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>1. Download Registration Artifacts</Typography>
-              <Typography variant="body2" sx={{ color: '#5F6368', mb: 2 }}>
-                Download these static forms, sign them by hand, and scan them back in.
-              </Typography>
-              <Button variant="outlined" startIcon={<DownloadIcon />} fullWidth sx={{ borderRadius: 2 }}>
-                Download All Required Forms (.zip)
-              </Button>
-            </Box>
-
-            {/* 2. UPLOAD SECTION */}
-            <Box sx={{ p: 2, borderRadius: 2, border: '1px solid #E8EAED' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>2. Upload Signed & Scanned Proof</Typography>
-              <Typography variant="body2" sx={{ color: '#5F6368', mb: 2 }}>
-                Upload the scanned PDF of your hand-signed registration forms.
-              </Typography>
-              <Button variant="contained" component="label" startIcon={<UploadIcon />} fullWidth sx={{ borderRadius: 2 }}>
-                Upload Signed Documents
-                <input type="file" hidden accept="application/pdf" onChange={(e) => {
-                  const file = e.target.files[0]
-                  if(file) {
-                    const reader = new FileReader();
-                    reader.onload = (re) => {
-                      uploadMutation.mutate({ 
-                        policyId: selectedPolicyForDocs.id, 
-                        files: [{ name: file.name, file_content: re.target.result }] 
-                      })
-                    }
-                    reader.readAsDataURL(file)
-                  }
-                }} />
-              </Button>
-            </Box>
-
-            {/* 3. STAFF APPROVAL SECTION (Only visible to Org Staff) */}
-            {(selectedPolicyForDocs?.status === 'documentation_review' || selectedPolicyForDocs?.status === 'pending') && (
-              <Box sx={{ p: 2, borderRadius: 2, bgcolor: '#E8F0FE', border: '1px solid #1A73E8' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1A73E8', mb: 1 }}>
-                  3. Internal Verification & Final Approval
+              
+              {/* 1. DOWNLOAD SECTION */}
+              <Box sx={{ p: 2.5, borderRadius: 3, border: '1px solid #E8EAED', bgcolor: '#FDFDFD' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>1. Download Registration Artifacts</Typography>
+                <Typography variant="body2" sx={{ color: '#5F6368', mb: 2.5, lineHeight: 1.5 }}>
+                  Download the official product blueprints and registration forms. Sign them manually and scan for upload.
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#5F6368', mb: 2 }}>
-                  By clicking approve, you confirm that the consumer identity has been verified against platform documentation and that all signed forms are correct.
-                </Typography>
-                <Button 
-                  variant="contained" 
-                  color="success" 
-                  fullWidth 
-                  onClick={() => approveDocsMutation.mutate(selectedPolicyForDocs.id)}
-                  sx={{ borderRadius: 2, fontWeight: 700 }}
-                  disabled={approveDocsMutation.isPending}
-                >
-                  {approveDocsMutation.isPending ? <Spinner size={24} color="inherit" /> : 'Approve Documents & Unlock Payment'}
+                <Button variant="outlined" startIcon={<DownloadIcon />} fullWidth sx={{ borderRadius: 2, py: 1, fontWeight: 700 }}>
+                  Download All Required Forms (.zip)
                 </Button>
               </Box>
-            )}
 
-            {selectedPolicyForDocs?.status === 'docs_approved' && (
-              <Alert severity="success" sx={{ borderRadius: 2 }}>
-                Documents verified! The client can now proceed to premium payment.
-              </Alert>
-            )}
-            
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, bgcolor: '#F8F9FA' }}>
-          <Button onClick={() => setDocModalOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Policy Details & Q&A Dialog */}
-      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
-        <DialogTitle sx={{ bgcolor: '#F8F9FA', p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box sx={{ bgcolor: '#1A73E8', color: 'white', p: 1, borderRadius: 1.5, display: 'flex' }}>
-              <PolicyIcon />
-            </Box>
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 800 }}>{selectedPolicy?.policy_number}</Typography>
-              <Typography variant="body2" sx={{ color: '#5F6368' }}>Policy Details & Q&A</Typography>
-            </Box>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Policy Information</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Typography variant="body2" sx={{ color: '#9AA0A6', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>Status</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>{selectedPolicy?.status}</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" sx={{ color: '#9AA0A6', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>Premium</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>UGX {selectedPolicy?.premium || 0}</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" sx={{ color: '#9AA0A6', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>Start Date</Typography>
-                <Typography variant="body1">{selectedPolicy?.start_date || 'N/A'}</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" sx={{ color: '#9AA0A6', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>End Date</Typography>
-                <Typography variant="body1">{selectedPolicy?.end_date || 'N/A'}</Typography>
-              </Grid>
-            </Grid>
-          </Box>
-
-          <Divider sx={{ my: 3 }} />
-
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <ViewIcon sx={{ color: '#1A73E8' }} />
-            Questions & Answers
-          </Typography>
-
-          <Box sx={{ mb: 3 }}>
-            <TextField
-              fullWidth
-              multiline
-              rows={2}
-              placeholder="Ask a question about this policy..."
-              value={newQuestion}
-              onChange={(e) => setNewQuestion(e.target.value)}
-              disabled={createQuestionMutation.isLoading}
-            />
-            <Button
-              variant="contained"
-              onClick={() => createQuestionMutation.mutate(newQuestion)}
-              disabled={!newQuestion.trim() || createQuestionMutation.isLoading}
-              endIcon={<SendIcon />}
-              sx={{ mt: 1, borderRadius: 2 }}
-            >
-              {createQuestionMutation.isLoading ? 'Submitting...' : 'Ask Question'}
-            </Button>
-          </Box>
-
-          {questionsLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <Spinner />
-            </Box>
-          ) : (
-            <List>
-              {questions?.map((q) => (
-                <React.Fragment key={q.id}>
-                  <ListItem sx={{ bgcolor: '#F8F9FA', borderRadius: 2, mb: 1 }}>
-                    <ListItemIcon>
-                      <Avatar sx={{ width: 32, height: 32, bgcolor: '#E8F0FE' }}>
-                        {q.user_name?.charAt(0) || 'U'}
-                      </Avatar>
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 700 }}>{q.user_name || 'User'}</Typography>
-                          <Typography variant="body1" sx={{ mt: 0.5 }}>{q.question}</Typography>
-                        </Box>
+              {/* 2. UPLOAD SECTION */}
+              <Box sx={{ p: 2.5, borderRadius: 3, border: '1px solid #E8EAED' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>2. Upload Signed & Scanned Proof</Typography>
+                <Typography variant="body2" sx={{ color: '#5F6368', mb: 2.5, lineHeight: 1.5 }}>
+                  Submit the digital scan of your manual endorsement.
+                </Typography>
+                <Button variant="contained" component="label" startIcon={<UploadIcon />} fullWidth sx={{ borderRadius: 2, py: 1.25, fontWeight: 700 }}>
+                  {uploadMutation.isPending ? <Spinner size={20} color="inherit" /> : 'Upload Signed PDF'}
+                  <input type="file" hidden accept="application/pdf" onChange={(e) => {
+                    const file = e.target.files[0]
+                    if(file) {
+                      const reader = new FileReader();
+                      reader.onload = (re) => {
+                        uploadMutation.mutate({ 
+                          policyId: selectedPolicyForDocs.id, 
+                          files: [{ name: file.name, file_content: re.target.result }] 
+                        })
                       }
-                      secondary={`Asked on ${new Date(q.created_at).toLocaleDateString()}`}
-                    />
-                  </ListItem>
+                      reader.readAsDataURL(file)
+                    }
+                  }} />
+                </Button>
+              </Box>
 
-                  {q.answer && (
-                    <ListItem sx={{ bgcolor: '#E6F4EA', borderRadius: 2, mb: 1, ml: 4 }}>
-                      <ListItemIcon>
-                        <Avatar sx={{ width: 32, height: 32, bgcolor: '#1A73E8', color: 'white' }}>
-                          {q.answered_by_name?.charAt(0) || 'A'}
+              {/* 3. STAFF APPROVAL SECTION */}
+              {(selectedPolicyForDocs?.status === 'documentation_review' || selectedPolicyForDocs?.status === 'pending') && (
+                <Box sx={{ p: 2.5, borderRadius: 3, bgcolor: '#E8F0FE', border: '1px solid #1A73E8' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 900, color: '#1A73E8', mb: 1.5 }}>
+                    3. Underwriter Final Review
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#5F6368', mb: 3, lineHeight: 1.5 }}>
+                    Verify that the scanned forms match the platform consumer identity. Approval instantly unlocks the payment gateway.
+                  </Typography>
+                  <Button 
+                    variant="contained" 
+                    color="success" 
+                    fullWidth 
+                    onClick={() => approveDocsMutation.mutate(selectedPolicyForDocs.id)}
+                    sx={{ borderRadius: 2, py: 1.25, fontWeight: 800, boxShadow: '0 4px 12px rgba(52,168,83,0.2)' }}
+                    disabled={approveDocsMutation.isPending}
+                  >
+                    {approveDocsMutation.isPending ? <Spinner size={24} color="inherit" /> : 'Approve & Unlock Payment'}
+                  </Button>
+                </Box>
+              )}
+
+              {selectedPolicyForDocs?.status === 'docs_approved' && (
+                <Alert severity="success" variant="filled" sx={{ borderRadius: 3, fontWeight: 700 }}>
+                  Compliance satisfied! Payment gateway active.
+                </Alert>
+              )}
+            </Box>
+          </Box>
+
+          {/* Drawer Footer */}
+          <Box sx={{ p: 3, bgcolor: '#F8F9FA', borderTop: '1px solid #E8EAED', display: 'flex', justifyContent: 'flex-end' }}>
+            <Button variant="outlined" onClick={() => setDocModalOpen(false)} sx={{ borderRadius: 2, fontWeight: 700, px: 4 }}>Close Panel</Button>
+          </Box>
+        </Box>
+      </Drawer>
+
+      {/* Policy Details & Q&A Drawer */}
+      <Drawer
+        anchor="right"
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        PaperProps={{
+          sx: { width: { xs: '100%', sm: 600 }, border: 'none', boxShadow: '-8px 0 32px rgba(0,0,0,0.1)' }
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Drawer Header */}
+          <Box sx={{ bgcolor: '#F8F9FA', p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E8EAED' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ bgcolor: '#1A73E8', color: 'white', p: 1, borderRadius: 1.5, display: 'flex' }}>
+                <PolicyIcon />
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 800 }}>{selectedPolicy?.policy_number}</Typography>
+                <Typography variant="body2" sx={{ color: '#5F6368' }}>Policy Details & Expert Q&A</Typography>
+              </Box>
+            </Box>
+            <IconButton onClick={() => setDetailsOpen(false)} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          {/* Drawer Content */}
+          <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
+            <Box sx={{ mb: 4, p: 2, borderRadius: 3, border: '1px solid #E8EAED', bgcolor: '#FDFDFD' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2, color: '#202124', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Policy Snapshot</Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: '#9AA0A6', fontWeight: 700, textTransform: 'uppercase', display: 'block', mb: 0.5 }}>Current Status</Typography>
+                  <StatusBadge status={selectedPolicy?.status ? selectedPolicy.status.charAt(0).toUpperCase() + selectedPolicy.status.slice(1) : 'Unknown'} />
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: '#9AA0A6', fontWeight: 700, textTransform: 'uppercase', display: 'block', mb: 0.5 }}>Total Premium</Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 900, color: '#1E8E3E' }}>{formatCurrency(selectedPolicy?.premium, selectedPolicy?.currency)}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: '#9AA0A6', fontWeight: 700, textTransform: 'uppercase', display: 'block', mb: 0.5 }}>Effective From</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{selectedPolicy?.start_date || 'N/A'}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: '#9AA0A6', fontWeight: 700, textTransform: 'uppercase', display: 'block', mb: 0.5 }}>Termination Date</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{selectedPolicy?.end_date || 'N/A'}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 1, borderStyle: 'dashed' }} />
+                  <Typography variant="caption" sx={{ color: '#9AA0A6', fontWeight: 700, textTransform: 'uppercase', display: 'block', mb: 1 }}>Product Engineering</Typography>
+                  <Box sx={{ p: 1.5, bgcolor: '#F1F3F4', borderRadius: 2 }}>
+                    <Typography sx={{ fontSize: '0.8rem', fontWeight: 800, mb: 0.5 }}>{selectedPolicy?.product_info?.name}</Typography>
+                    <Typography sx={{ fontSize: '0.75rem', color: '#5F6368' }}>
+                      <b>Template:</b> {selectedPolicy?.template_info?.name || 'Not Defined'}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.75rem', color: '#5F6368' }}>
+                      <b>Calc Model:</b> {selectedPolicy?.template_info?.calculation_template || 'Dynamic Pricing'}
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Box>
+
+            <Divider sx={{ my: 4 }} />
+
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <ViewIcon sx={{ color: '#1A73E8' }} />
+              Policy Support & Discussion
+            </Typography>
+
+            <Box sx={{ mb: 4, p: 2, bgcolor: '#F8F9FA', borderRadius: 3, border: '1px solid #E8EAED' }}>
+              <TextField
+                fullWidth
+                multiline
+                rows={2}
+                placeholder="Ask clarifying questions regarding this specific policy holder or coverage..."
+                value={newQuestion}
+                onChange={(e) => setNewQuestion(e.target.value)}
+                disabled={createQuestionMutation.isPending}
+                sx={{ bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
+                <Button
+                  variant="contained"
+                  onClick={() => createQuestionMutation.mutate(newQuestion)}
+                  disabled={!newQuestion.trim() || createQuestionMutation.isPending}
+                  startIcon={createQuestionMutation.isPending ? <Spinner size={16} color="inherit" /> : <SendIcon />}
+                  sx={{ borderRadius: 2, px: 3, fontWeight: 700 }}
+                >
+                  Post Question
+                </Button>
+              </Box>
+            </Box>
+
+            {questionsLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+                <Spinner size={32} />
+              </Box>
+            ) : (
+              <List sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {(questions || []).length === 0 && (
+                  <Alert severity="info" variant="outlined" sx={{ borderRadius: 3, borderStyle: 'dashed' }}>
+                    No expert discussions found for this policy ledger yet.
+                  </Alert>
+                )}
+                {questions?.map((q) => (
+                  <Box key={q.id}>
+                    <ListItem disablePadding sx={{ alignItems: 'flex-start' }}>
+                      <ListItemIcon sx={{ minWidth: 44 }}>
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: '#E8F0FE', color: '#1A73E8', fontWeight: 800, fontSize: '0.8rem' }}>
+                          {q.user_name?.charAt(0) || 'U'}
                         </Avatar>
                       </ListItemIcon>
                       <ListItemText
                         primary={
-                          <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 700, color: '#137333' }}>
-                              {q.answered_by_name} ({q.answered_by_role})
-                            </Typography>
-                            <Typography variant="body1" sx={{ mt: 0.5 }}>{q.answer}</Typography>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 800 }}>{q.user_name || 'System User'}</Typography>
+                            <Typography variant="caption" sx={{ color: '#9AA0A6' }}>{new Date(q.created_at).toLocaleDateString()}</Typography>
                           </Box>
                         }
-                        secondary={`Answered on ${new Date(q.answered_at).toLocaleDateString()}`}
+                        secondary={<Typography variant="body2" sx={{ color: '#202124', lineHeight: 1.5 }}>{q.question}</Typography>}
                       />
                     </ListItem>
-                  )}
 
-                  {!q.answer && (user?.role === 'organization_admin' || user?.role === 'underwriter' || user?.role === 'agent') && (
-                    <Box sx={{ ml: 4, mb: 2, mt: 1 }}>
-                      <TextField
-                        fullWidth
-                        multiline
-                        rows={2}
-                        placeholder="Type your answer..."
-                        value={answerInputs[q.id] || ''}
-                        onChange={(e) => setAnswerInputs(prev => ({ ...prev, [q.id]: e.target.value }))}
-                        disabled={answerQuestionMutation.isLoading}
-                        size="small"
-                      />
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={() => answerQuestionMutation.mutate({ questionId: q.id, answer: answerInputs[q.id] })}
-                        disabled={!answerInputs[q.id]?.trim() || answerQuestionMutation.isLoading}
-                        sx={{ mt: 1, borderRadius: 2 }}
-                      >
-                        {answerQuestionMutation.isLoading ? 'Submitting...' : 'Submit Answer'}
-                      </Button>
-                    </Box>
-                  )}
-                </React.Fragment>
-              ))}
-            </List>
-          )}
+                    {q.answer && (
+                      <Box sx={{ ml: 5.5, mt: 2, p: 2, bgcolor: '#E6F4EA', borderRadius: 2, borderLeft: '4px solid #34A853' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                          <Avatar sx={{ width: 24, height: 24, bgcolor: '#1A73E8', color: 'white', fontSize: '0.7rem' }}>
+                            {q.answered_by_name?.charAt(0) || 'A'}
+                          </Avatar>
+                          <Typography variant="body2" sx={{ fontWeight: 900, color: '#137333' }}>
+                            {q.answered_by_name} <Typography component="span" sx={{ fontSize: '0.7rem', fontWeight: 400 }}>({q.answered_by_role})</Typography>
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" sx={{ color: '#137333', lineHeight: 1.5 }}>{q.answer}</Typography>
+                      </Box>
+                    )}
 
-          {!questionsLoading && questions?.length === 0 && (
-            <Alert severity="info" sx={{ borderRadius: 2 }}>
-              No questions yet. Be the first to ask!
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 3, bgcolor: '#F8F9FA' }}>
-          <Button onClick={() => setDetailsOpen(false)} sx={{ fontWeight: 600 }}>Close</Button>
-        </DialogActions>
-      </Dialog>
+                    {!q.answer && (user?.role === 'organization_admin' || user?.role === 'underwriter' || user?.role === 'agent') && (
+                      <Box sx={{ ml: 5.5, mt: 2 }}>
+                        <TextField
+                          fullWidth
+                          multiline
+                          rows={2}
+                          size="small"
+                          placeholder="Type official response..."
+                          value={answerInputs[q.id] || ''}
+                          onChange={(e) => setAnswerInputs(prev => ({ ...prev, [q.id]: e.target.value }))}
+                          disabled={answerQuestionMutation.isPending}
+                          sx={{ bgcolor: '#F8F9FA', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                        />
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={() => answerQuestionMutation.mutate({ questionId: q.id, answer: answerInputs[q.id] })}
+                            disabled={!answerInputs[q.id]?.trim() || answerQuestionMutation.isPending}
+                            sx={{ borderRadius: 1.5, fontWeight: 700 }}
+                          >
+                            {answerQuestionMutation.isPending ? 'Saving...' : 'Submit Answer'}
+                          </Button>
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
+                ))}
+              </List>
+            )}
+          </Box>
+
+          {/* Drawer Footer */}
+          <Box sx={{ p: 3, borderTop: '1px solid #E8EAED', bgcolor: '#F8F9FA', display: 'flex', justifyContent: 'flex-end' }}>
+            <Button variant="outlined" onClick={() => setDetailsOpen(false)} sx={{ borderRadius: 2, fontWeight: 700, px: 4 }}>Close Ledger View</Button>
+          </Box>
+        </Box>
+      </Drawer>
     </Box>
   )
 }

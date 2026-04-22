@@ -1,5 +1,8 @@
 import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useQuery } from '@tanstack/react-query'
+import { commissionAPI, tenancyAPI } from '../services/api'
+import { formatCurrencyShort } from '../utils/formatters'
 import {
   Box,
   Typography,
@@ -64,10 +67,24 @@ export default function Profile() {
 
   const initials = `${form.firstName[0] || ''}${form.lastName[0] || ''}`.toUpperCase()
 
+  const { data: memData } = useQuery({
+    queryKey: ['profile-memberships', user?.id],
+    queryFn: async () => (await tenancyAPI.getMemberships(user?.id)).data,
+    enabled: !!user?.id,
+  })
+  const myMemId = memData?.items?.find((m) => m.organization_id === user?.organization_id)?.id
+  const { data: ledgerData } = useQuery({
+    queryKey: ['profile-ledger', user?.organization_id, myMemId],
+    queryFn: async () => (await commissionAPI.getLedger(user?.organization_id, myMemId)).data,
+    enabled: !!user?.organization_id && !!myMemId,
+  })
+  const totalEarned = ledgerData?.items?.filter(l => l.entry_type === 'earned').reduce((s, l) => s + Number(l.amount), 0) || 0
+  const ledgerCurrency = ledgerData?.items?.[0]?.currency || user?.currency || 'UGX'
+
   const STATS = [
     { icon: PolicyIcon, label: 'Policies Managed', value: '24', color: '#1A73E8', bg: '#E8F0FE' },
     { icon: ClaimIcon, label: 'Claims Processed', value: '8', color: '#E37400', bg: '#FEF3E2' },
-    { icon: CommIcon, label: 'Commission Earned', value: 'UGX 1.2M', color: '#1E8E3E', bg: '#E6F4EA' },
+    { icon: CommIcon, label: 'Commission Earned', value: formatCurrencyShort(totalEarned, ledgerCurrency), color: '#1E8E3E', bg: '#E6F4EA' },
   ]
 
   return (

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import { policyAPI, claimAPI, commissionAPI, tenancyAPI } from '../services/api'
+import { formatCurrencyShort } from '../utils/formatters'
 import {
   Box,
   Typography,
@@ -147,7 +148,7 @@ const CustomTooltipRevenue = ({ active, payload, label }) => {
       <Typography sx={{ fontWeight: 700, fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
       {payload.map((p) => (
         <Typography key={p.dataKey} sx={{ fontSize: '0.75rem', color: p.color }}>
-          {p.name}: {p.dataKey === 'revenue' ? `UGX ${p.value}K` : p.value}
+          {p.name}: {p.dataKey === 'revenue' ? formatCurrencyShort(p.value * 1000) : p.value}
         </Typography>
       ))}
     </Box>
@@ -243,7 +244,7 @@ export default function Dashboard() {
     {
       key: 'commissions', title: 'Earnings', icon: CommissionIcon, color: '#1E8E3E', bg: '#E6F4EA', trend: 'up', trendVal: '+', trendLabel: 'earned',
       value: ledgerData?.items?.filter(l => l.entry_type === 'earned').reduce((s, l) => s + Number(l.amount), 0) || 0,
-      format: (v) => `UGX ${(v / 1000).toLocaleString()}K`,
+      format: (v) => formatCurrencyShort(v),
       visible: true
     },
     {

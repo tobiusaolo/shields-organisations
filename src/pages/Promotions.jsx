@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import { promotionAPI } from '../services/api'
+import { formatCurrency } from '../utils/formatters'
 import {
   Box, Typography, Grid, Paper, Tooltip, IconButton, Avatar, Chip, CircularProgress,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Divider
@@ -125,11 +126,11 @@ export default function Promotions() {
                       </Box>
                     </TableCell>
                     <TableCell sx={{ fontWeight: 700, color: '#34A853' }}>
-                      {c.discount_type === 'percentage' ? `${(c.discount_value * 100).toFixed(0)}% OFF` : `UGX ${c.discount_value?.toLocaleString()} OFF`}
+                      {c.discount_type === 'percentage' ? `${(c.discount_value * 100).toFixed(0)}% OFF` : `${formatCurrency(c.discount_value, c.currency)} OFF`}
                     </TableCell>
                     <TableCell>
                       {c.min_premium > 0 ? (
-                        <Typography sx={{ fontSize: '0.8rem', color: '#5F6368' }}>Min. Spend: UGX {c.min_premium.toLocaleString()}</Typography>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#5F6368' }}>Min. Spend: {formatCurrency(c.min_premium, c.currency)}</Typography>
                       ) : (
                         <Typography sx={{ fontSize: '0.8rem', color: '#9AA0A6' }}>No minimum spend</Typography>
                       )}

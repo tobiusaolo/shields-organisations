@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import { commissionAPI, tenancyAPI } from '../services/api'
+import { formatCurrency, formatCurrencyShort } from '../utils/formatters'
 import {
   Box,
   Typography,
@@ -48,7 +49,8 @@ const CHART_DATA = [
 ]
 
 const STATUS_CFG = {
-  pending: { label: 'Pending', color: '#E37400', bg: '#FEF3E2', dot: '#F9AB00' },
+  accrued: { label: 'Accrued', color: '#E37400', bg: '#FEF3E2', dot: '#F9AB00' },
+  confirmed: { label: 'Confirmed', color: '#1A73E8', bg: '#E8F0FE', dot: '#1A73E8' },
   paid: { label: 'Paid', color: '#1E8E3E', bg: '#E6F4EA', dot: '#34A853' },
 }
 
@@ -87,24 +89,30 @@ export default function Commissions() {
   // Identify the membership belonging to the current organization
   const myMembershipId = membershipsData?.items?.find((m) => m.organization_id === user?.organization_id)?.id
 
-  const { data, isLoading: loading } = useQuery({
+  const { data: ledgerRes, isLoading: ledgerLoading } = useQuery({
     queryKey: ['ledger', user?.organization_id, myMembershipId, page],
-    queryFn: async () => {
-      const params = { skip: (page - 1) * rowsPerPage, limit: rowsPerPage }
-      // Get Ledger expects membershipId parameter
-      const res = await commissionAPI.getLedger(user.organization_id, myMembershipId, params)
-      return res.data
-    },
+    queryFn: () => commissionAPI.getLedger(user.organization_id, myMembershipId, {
+      skip: (page - 1) * rowsPerPage,
+      limit: rowsPerPage
+    }),
     enabled: !!user?.organization_id && !!myMembershipId
   })
 
-  const ledger = data?.items || []
-  const totalItems = data?.total || 0
+  const { data: totalsRes, isLoading: totalsLoading } = useQuery({
+    queryKey: ['ledger-totals', user?.organization_id, myMembershipId],
+    queryFn: () => commissionAPI.getLedgerTotals(user.organization_id, myMembershipId),
+    enabled: !!user?.organization_id && !!myMembershipId
+  })
 
-  const totalEarned = ledger.filter(l => l.entry_type === 'earned').reduce((s, l) => s + Number(l.amount), 0)
-  const pending = ledger.filter(l => l.status === 'accrued').reduce((s, l) => s + Number(l.amount), 0)
-  const paid = ledger.filter(l => l.status === 'paid' && Number(l.amount) > 0).reduce((s, l) => s + Number(l.amount), 0)
-  const clawbacks = Math.abs(ledger.filter(l => l.entry_type === 'clawback').reduce((s, l) => s + Number(l.amount), 0))
+  const loading = ledgerLoading || totalsLoading
+  const ledger = ledgerRes?.data?.items || []
+  const totalItems = ledgerRes?.data?.total || 0
+  const totals = totalsRes?.data || {}
+
+  const totalEarned = totals.total_earned || 0
+  const pending = totals.accrued || 0
+  const paid = totals.paid || 0
+  const clawbacks = totals.clawbacks || 0
 
   const paginated = ledger
 
@@ -141,7 +149,7 @@ export default function Commissions() {
                 {loading
                   ? <Skeleton width="70%" height={28} />
                   : <Typography sx={{ fontWeight: 800, fontSize: '1.4rem', color: '#202124' }}>
-                      UGX {(value / 1000).toFixed(1)}K
+                      {formatCurrencyShort(value, user?.currency)}
                     </Typography>
                 }
                 <Typography sx={{ fontSize: '0.78rem', color: '#5F6368', mt: 0.25 }}>{label}</Typography>
@@ -165,7 +173,7 @@ export default function Commissions() {
                     <CartesianGrid strokeDasharray="4 4" stroke="#F1F3F4" vertical={false} />
                     <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9AA0A6' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 12, fill: '#9AA0A6' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}K`} />
-                    <RTooltip formatter={(v) => [`UGX ${v.toLocaleString()}`, 'Commission']} contentStyle={{ borderRadius: 8, border: '1px solid #E8EAED', fontSize: '0.8rem' }} />
+                    <RTooltip formatter={(v) => [formatCurrency(v, user?.currency), 'Commission']} contentStyle={{ borderRadius: 8, border: '1px solid #E8EAED', fontSize: '0.8rem' }} />
                     <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
                       {CHART_DATA.map((_, i) => (
                         <Cell key={i} fill={i === CHART_DATA.length - 1 ? '#1A73E8' : '#C5D4F5'} />
@@ -201,10 +209,10 @@ export default function Commissions() {
                     />
                   </Box>
                   {[
-                    { label: 'Total earned this month', value: `UGX ${totalEarned.toLocaleString()}`, color: '#202124' },
-                    { label: 'Already paid', value: `UGX ${paid.toLocaleString()}`, color: '#1E8E3E' },
-                    { label: 'Pending approval', value: `UGX ${pending.toLocaleString()}`, color: '#E37400' },
-                    { label: 'Clawbacks applied', value: `- UGX ${clawbacks.toLocaleString()}`, color: '#D93025' },
+                    { label: 'Total earned this month', value: formatCurrency(totalEarned, user?.currency), color: '#202124' },
+                    { label: 'Already paid', value: formatCurrency(paid, user?.currency), color: '#1E8E3E' },
+                    { label: 'Pending approval', value: formatCurrency(pending, user?.currency), color: '#E37400' },
+                    { label: 'Clawbacks applied', value: `- ${formatCurrency(clawbacks, user?.currency)}`, color: '#D93025' },
                   ].map(({ label, value, color }) => (
                     <Box key={label} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                       <Typography sx={{ fontSize: '0.8rem', color: '#5F6368' }}>{label}</Typography>
@@ -215,7 +223,7 @@ export default function Commissions() {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#202124' }}>Net payable</Typography>
                     <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, color: '#1A73E8' }}>
-                      UGX {(totalEarned - clawbacks).toLocaleString()}
+                      {formatCurrency(totalEarned - clawbacks, user?.currency)}
                     </Typography>
                   </Box>
                 </>
@@ -258,13 +266,16 @@ export default function Commissions() {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#202124', fontFamily: 'monospace' }}>
-                          {l.policy_id}
+                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#202124' }}>
+                          {l.policy_number || 'Standalone'}
+                        </Typography>
+                        <Typography sx={{ fontSize: '0.65rem', color: '#9AA0A6', fontFamily: 'monospace' }}>
+                          {l.policy_id.split('-')[0]}...
                         </Typography>
                       </TableCell>
                       <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <Typography sx={{ fontSize: '0.82rem', color: '#5F6368' }}>
-                          {l.commission_structure_id}
+                          {l.product_name || 'N/A'}
                         </Typography>
                       </TableCell>
                       <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
@@ -278,13 +289,8 @@ export default function Commissions() {
                           }}
                         />
                       </TableCell>
-                      <TableCell>
-                        <Typography sx={{
-                          fontSize: '0.85rem', fontWeight: 700,
-                          color: Number(l.amount) < 0 ? '#D93025' : '#202124',
-                        }}>
-                          {Number(l.amount) < 0 ? '−' : '+'}UGX {Math.abs(Number(l.amount)).toLocaleString()}
-                        </Typography>
+                      <TableCell sx={{ fontWeight: 700, color: Number(l.amount) < 0 ? '#D93025' : '#1E8E3E' }}>
+                        {Number(l.amount) < 0 ? '−' : '+'}{formatCurrency(Math.abs(Number(l.amount)), l.currency)}
                       </TableCell>
                       <TableCell><StatusBadge status={l.status} /></TableCell>
                     </TableRow>

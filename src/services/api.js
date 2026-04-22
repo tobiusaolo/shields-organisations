@@ -56,7 +56,7 @@ export const tenancyAPI = {
   createMembership: (data) => api.post('/tenancy/memberships', data),
   updateMembership: (membershipId, orgId, data) => api.put(`/tenancy/memberships/${membershipId}`, data, { params: { org_id: orgId } }),
   deleteMembership: (membershipId, orgId) => api.delete(`/tenancy/memberships/${membershipId}`, { params: { org_id: orgId } }),
-  
+
   // KYC Endpoints
   submitKyc: (orgId, data) => api.post(`/tenancy/organizations/${orgId}/kyc/submit`, data),
   approveKyc: (orgId) => api.post(`/tenancy/organizations/${orgId}/kyc/approve`),
@@ -66,7 +66,7 @@ export const tenancyAPI = {
   submitUserKyc: (data) => api.post('/tenancy/users/me/kyc', data),
   approveUser: (userId) => api.post(`/tenancy/users/${userId}/approve`),
   getGlobalUsers: () => api.get('/tenancy/users'),
-  
+
   // Client Management (Personal Portfolio)
   registerClient: (data, kycData) => api.post('/tenancy/clients', { ...data, kyc_data: kycData }),
   getMyClients: (params) => api.get('/tenancy/clients', { params }),
@@ -79,7 +79,7 @@ export const productAPI = {
   createProduct: (orgId, data) => api.post(`/products/organizations/${orgId}/products`, data),
   updateProduct: (orgId, productId, data) => api.put(`/products/organizations/${orgId}/products/${productId}`, data),
   deleteProduct: (orgId, productId) => api.delete(`/products/organizations/${orgId}/products/${productId}`),
-  createProductTemplate: (orgId, productId, data) => api.post(`/products/organizations/${orgId}/product-templates`, data),
+  createProductTemplate: (orgId, data) => api.post(`/products/organizations/${orgId}/product-templates`, data),
   getProductTemplates: (orgId, productId) => api.get(`/products/organizations/${orgId}/product-templates`, { params: { product_id: productId } }),
   updateProductTemplate: (orgId, templateId, data) => api.put(`/products/organizations/${orgId}/product-templates/${templateId}`, data),
   deleteProductTemplate: (orgId, templateId) => api.delete(`/products/organizations/${orgId}/product-templates/${templateId}`),
@@ -102,6 +102,15 @@ export const productAPI = {
   deleteProductReview: (orgId, productId, reviewId) => api.delete(`/products/organizations/${orgId}/products/${productId}/reviews/${reviewId}`),
 }
 
+export const formAPI = {
+  createForm: (orgId, data) => api.post(`/products/organizations/${orgId}/dynamic-forms`, data),
+  getTemplateForms: (orgId, templateId) => api.get(`/products/organizations/${orgId}/product-templates/${templateId}/dynamic-forms`),
+  getForm: (orgId, formId) => api.get(`/products/organizations/${orgId}/dynamic-forms/${formId}`),
+  addField: (orgId, formId, data) => api.post(`/products/organizations/${orgId}/dynamic-forms/${formId}/fields`, data),
+  deleteForm: (orgId, formId) => api.delete(`/products/organizations/${orgId}/dynamic-forms/${formId}`),
+  deleteTemplateForms: (orgId, templateId) => api.delete(`/products/organizations/${orgId}/product-templates/${templateId}/dynamic-forms`),
+}
+
 export const policyAPI = {
   getPolicies: (orgId, params) => api.get(`/policies/organizations/${orgId}/policies`, { params }),
   getQuotations: (orgId, params) => api.get(`/policies/organizations/${orgId}/quotations`, { params }),
@@ -122,8 +131,14 @@ export const claimAPI = {
 }
 
 export const commissionAPI = {
-  getLedger: (orgId, membershipId) => api.get(`/commissions/organizations/${orgId}/memberships/${membershipId}/ledger`),
+  getLedger: (orgId, membershipId, params) => api.get(`/commissions/organizations/${orgId}/memberships/${membershipId}/ledger`, { params }),
+  getLedgerTotals: (orgId, membershipId) => api.get(`/commissions/organizations/${orgId}/memberships/${membershipId}/ledger-totals`),
+  updateLedgerStatus: (orgId, ledgerId, status) => api.put(`/commissions/organizations/${orgId}/commission-ledger/${ledgerId}/status`, null, { params: { status } }),
   getPayouts: (orgId) => api.get(`/commissions/organizations/${orgId}/commission-payouts`),
+  createCommissionStructure: (orgId, data) => api.post(`/commissions/organizations/${orgId}/commission-structures`, data),
+  getCommissionStructures: (orgId, templateId) => api.get(`/commissions/organizations/${orgId}/commission-structures`, { params: { product_template_id: templateId } }),
+  deleteCommissionStructure: (orgId, structureId) => api.delete(`/commissions/organizations/${orgId}/commission-structures/${structureId}`),
+  deleteTemplateCommissions: (orgId, templateId) => api.delete(`/commissions/organizations/${orgId}/product-templates/${templateId}/commission-structures`),
 }
 
 export const kycAPI = {

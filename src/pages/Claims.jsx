@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import { claimAPI } from '../services/api'
+import { formatCurrency } from '../utils/formatters'
 import {
   Box,
   Typography,
@@ -27,14 +28,9 @@ import {
   Card,
   CardContent,
   Avatar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Select,
-  FormControl,
   CircularProgress as Spinner,
   Alert,
+  Drawer,
 } from '@mui/material'
 import {
   Search as SearchIcon,
@@ -53,6 +49,7 @@ import {
   AccountBalance as BankIcon,
   PhoneAndroid as MobileIcon,
   Send as SendIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material'
 
 // Deleted CLAIMS mock payload
@@ -185,9 +182,6 @@ export default function Claims() {
             Manage and track insurance claim lifecycles
           </Typography>
         </Box>
-        <Button variant="contained" startIcon={<AddIcon />} sx={{ borderRadius: 2.5, fontWeight: 700 }}>
-          File New Claim
-        </Button>
       </Box>
 
       {/* Status Summary Cards */}
@@ -331,7 +325,7 @@ export default function Claims() {
                       </TableCell>
                       <TableCell>
                         <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#202124' }}>
-                          UGX {Number(c.estimated_amount).toLocaleString()}
+                          {formatCurrency(c.estimated_amount, c.currency)}
                         </Typography>
                       </TableCell>
                       <TableCell><StatusBadge status={c.status} /></TableCell>
@@ -451,105 +445,135 @@ export default function Claims() {
         </MenuItem>
       </Menu>
 
-      {/* Payout Processing Modal */}
-      <Dialog open={payoutModalOpen} onClose={handleClosePayoutModal} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <PayoutIcon sx={{ color: '#1A73E8' }} />
-          <Typography sx={{ fontWeight: 700 }}>Process Claim Payout</Typography>
-        </DialogTitle>
-        <DialogContent>
-          {selectedClaimForPayout && (
-            <Box>
-              <Alert severity="info" sx={{ mb: 3 }}>
-                Processing payout for Claim <strong>{selectedClaimForPayout.id.split('-')[0].toUpperCase()}</strong> with estimated amount <strong>UGX {Number(selectedClaimForPayout.estimated_amount).toLocaleString()}</strong>
-              </Alert>
-
-              <Grid container spacing={2.5}>
-                <Grid item xs={12}>
-                  <FormControl fullWidth>
-                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, mb: 1, color: '#202124' }}>Payout Method</Typography>
-                    <Select
-                      value={payoutForm.payout_method}
-                      onChange={(e) => setPayoutForm(f => ({ ...f, payout_method: e.target.value }))}
-                      size="small"
-                    >
-                      <MenuItem value="mobile_money">Mobile Money (MTN, Airtel)</MenuItem>
-                      <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                {payoutForm.payout_method === 'mobile_money' ? (
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Phone Number"
-                      placeholder="e.g., 256700123456"
-                      value={payoutForm.payout_phone_number}
-                      onChange={(e) => setPayoutForm(f => ({ ...f, payout_phone_number: e.target.value }))}
-                      size="small"
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <MobileIcon sx={{ fontSize: 18, color: '#5F6368' }} />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                  </Grid>
-                ) : (
-                  <>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="Bank Name"
-                        placeholder="e.g., Stanbic Bank"
-                        value={payoutForm.payout_bank_name}
-                        onChange={(e) => setPayoutForm(f => ({ ...f, payout_bank_name: e.target.value }))}
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="Account Name"
-                        placeholder="As it appears on bank records"
-                        value={payoutForm.payout_account_name}
-                        onChange={(e) => setPayoutForm(f => ({ ...f, payout_account_name: e.target.value }))}
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="Account Number"
-                        placeholder="e.g., 9030001234567"
-                        value={payoutForm.payout_account_number}
-                        onChange={(e) => setPayoutForm(f => ({ ...f, payout_account_number: e.target.value }))}
-                        size="small"
-                      />
-                    </Grid>
-                  </>
-                )}
-              </Grid>
+      {/* Payout Processing Drawer */}
+      <Drawer
+        anchor="right"
+        open={payoutModalOpen}
+        onClose={handleClosePayoutModal}
+        PaperProps={{
+          sx: { width: { xs: '100%', sm: 550 }, border: 'none', boxShadow: '-8px 0 32px rgba(0,0,0,0.1)' }
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Drawer Header */}
+          <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E8EAED' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <PayoutIcon sx={{ color: '#1A73E8' }} />
+              <Typography variant="h6" sx={{ fontWeight: 800 }}>Process Claim Payout</Typography>
             </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 0 }}>
-          <Button onClick={handleClosePayoutModal} sx={{ borderRadius: 2.5, fontWeight: 600 }}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleProcessPayout}
-            variant="contained"
-            disabled={payoutLoading}
-            startIcon={payoutLoading ? <Spinner size={16} /> : <SendIcon />}
-            sx={{ borderRadius: 2.5, fontWeight: 700 }}
-          >
-            {payoutLoading ? 'Processing...' : 'Process Payout'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <IconButton onClick={handleClosePayoutModal} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          {/* Drawer Content */}
+          <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
+            {selectedClaimForPayout && (
+              <Box>
+                <Alert severity="info" sx={{ mb: 4, borderRadius: 3 }}>
+                  Processing payout for Claim <strong>{selectedClaimForPayout.id.split('-')[0].toUpperCase()}</strong> with estimated amount <strong>{formatCurrency(selectedClaimForPayout.estimated_amount, selectedClaimForPayout.currency)}</strong>
+                </Alert>
+
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <FormControl fullWidth>
+                      <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, mb: 1.5, color: '#202124' }}>Select Payout Method</Typography>
+                      <Select
+                        value={payoutForm.payout_method}
+                        onChange={(e) => setPayoutForm(f => ({ ...f, payout_method: e.target.value }))}
+                        size="small"
+                        sx={{ borderRadius: 2.5 }}
+                      >
+                        <MenuItem value="mobile_money">Mobile Money (MTN, Airtel)</MenuItem>
+                        <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  {payoutForm.payout_method === 'mobile_money' ? (
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Phone Number"
+                        placeholder="e.g., 256700123456"
+                        value={payoutForm.payout_phone_number}
+                        onChange={(e) => setPayoutForm(f => ({ ...f, payout_phone_number: e.target.value }))}
+                        size="small"
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <MobileIcon sx={{ fontSize: 18, color: '#5F6368' }} />
+                            </InputAdornment>
+                          ),
+                          sx: { borderRadius: 2.5 }
+                        }}
+                      />
+                    </Grid>
+                  ) : (
+                    <>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="Bank Name"
+                          placeholder="e.g., Stanbic Bank"
+                          value={payoutForm.payout_bank_name}
+                          onChange={(e) => setPayoutForm(f => ({ ...f, payout_bank_name: e.target.value }))}
+                          size="small"
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2.5 } }}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="Account Name"
+                          placeholder="As it appears on bank records"
+                          value={payoutForm.payout_account_name}
+                          onChange={(e) => setPayoutForm(f => ({ ...f, payout_account_name: e.target.value }))}
+                          size="small"
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2.5 } }}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="Account Number"
+                          placeholder="e.g., 9030001234567"
+                          value={payoutForm.payout_account_number}
+                          onChange={(e) => setPayoutForm(f => ({ ...f, payout_account_number: e.target.value }))}
+                          size="small"
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2.5 } }}
+                        />
+                      </Grid>
+                    </>
+                  )}
+                </Grid>
+              </Box>
+            )}
+          </Box>
+
+          {/* Drawer Footer */}
+          <Box sx={{ p: 3, borderTop: '1px solid #E8EAED', display: 'flex', gap: 2 }}>
+            <Button 
+              fullWidth 
+              variant="outlined" 
+              onClick={handleClosePayoutModal} 
+              sx={{ borderRadius: 2.5, py: 1.25, fontWeight: 600 }}
+            >
+              Cancel
+            </Button>
+            <Button
+              fullWidth 
+              onClick={handleProcessPayout}
+              variant="contained"
+              disabled={payoutLoading}
+              startIcon={payoutLoading ? <Spinner size={16} color="inherit" /> : <SendIcon />}
+              sx={{ borderRadius: 2.5, py: 1.25, fontWeight: 700 }}
+            >
+              {payoutLoading ? 'Processing...' : 'Process Payout'}
+            </Button>
+          </Box>
+        </Box>
+      </Drawer>
     </Box>
   )
 }

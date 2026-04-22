@@ -94,7 +94,7 @@ export default function Layout({ children }) {
   const notifications = [
     { id: 1, text: 'KYC verification pending review', time: '5 min ago', unread: true, type: 'warning' },
     { id: 2, text: 'Policy POL-2024-012 approved', time: '1 hour ago', unread: true, type: 'success' },
-    { id: 3, text: 'Payment UGX 50,000 received', time: '2 hours ago', unread: false, type: 'info' },
+    { id: 3, text: 'Premium payment received successfully', time: '2 hours ago', unread: false, type: 'info' },
     { id: 4, text: 'Commission payout processed', time: '1 day ago', unread: false, type: 'success' },
   ]
 
