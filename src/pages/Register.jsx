@@ -26,6 +26,7 @@ import {
   CardContent,
   Chip,
 } from '@mui/material'
+import { API_BASE_URL } from '../services/api'
 import {
   Visibility,
   VisibilityOff,
@@ -123,7 +124,7 @@ export default function Register() {
     
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:8000/api/v1/tenancy/organizations/register', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/tenancy/organizations/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
