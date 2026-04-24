@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { tenancyAPI, kycAPI, paymentAPI } from '../services/api'
+import Swal from 'sweetalert2'
+import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Typography,
@@ -99,9 +101,11 @@ function SectionHeader({ icon: Icon, title, subtitle }) {
 
 export default function KYC() {
   const { user, refreshContext } = useAuth()
+  const navigate = useNavigate()
   const [activeStep, setActiveStep] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [isSubmittedLocal, setIsSubmittedLocal] = useState(false)
   
   const [form, setForm] = useState({
     registration_name: '',
@@ -178,6 +182,18 @@ export default function KYC() {
     return () => { active = false }
   }, [user])
 
+  // Poll for status updates if KYC is 'submitted'
+  useEffect(() => {
+    let intervalId;
+    if (user?.kyc_status === 'submitted') {
+      intervalId = setInterval(() => {
+        refreshContext();
+      }, 5000); // Poll every 5 seconds
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [user?.kyc_status, refreshContext]);
 
   const update = (key, val) => setForm(f => ({ ...f, [key]: val }))
 
@@ -263,6 +279,15 @@ export default function KYC() {
       // Then submit KYC (Stripping payment_config to avoid backend validation error)
       const { payment_config, ...kycPayload } = form
       await tenancyAPI.submitKyc(orgId, kycPayload)
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Submission Successful!',
+        text: 'Your KYC details have been successfully submitted for review. They are now pending verification.',
+        confirmButtonColor: '#1A73E8'
+      })
+
+      setIsSubmittedLocal(true)
       await refreshContext() // Update user state to 'submitted'
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to submit KYC. Please check your data.')
@@ -294,7 +319,7 @@ export default function KYC() {
             </Typography>
             <Button 
                 variant="contained" 
-                onClick={() => window.location.href = '/'}
+                onClick={() => navigate('/')}
                 sx={{ borderRadius: 3, px: 6, py: 1.5, fontWeight: 700 }}
             >
               Go to Dashboard
@@ -305,7 +330,7 @@ export default function KYC() {
     )
   }
 
-  if (user?.kyc_status === 'submitted') {
+  if (user?.kyc_status === 'submitted' || isSubmittedLocal) {
     return (
       <Fade in={true} timeout={800}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>

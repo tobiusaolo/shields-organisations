@@ -20,9 +20,10 @@ export function AuthProvider({ children }) {
         
         // For organization admins, use organization KYC status if user's is pending
         const isOrgAdmin = userData.role === 'organization_admin' || userData.role === 'admin'
-        const effectiveKycStatus = (isOrgAdmin && userData.kyc_status === 'pending' && organization?.kyc_status === 'approved')
-          ? 'approved'
-          : userData.kyc_status || organization?.kyc_status
+        let effectiveKycStatus = userData.kyc_status || organization?.kyc_status
+        if (isOrgAdmin && userData.kyc_status === 'pending' && organization?.kyc_status && organization.kyc_status !== 'pending') {
+          effectiveKycStatus = organization.kyc_status
+        }
         
         setUser({
           ...userData,
