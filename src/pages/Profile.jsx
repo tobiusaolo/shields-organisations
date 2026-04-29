@@ -41,16 +41,36 @@ export default function Profile() {
   const { user } = useAuth()
   const [editing, setEditing] = useState(false)
   const [success, setSuccess] = useState(false)
+  
+  // Use React.useEffect to update form when user data is loaded
   const [form, setForm] = useState({
-    firstName: user?.first_name || 'John',
-    lastName: user?.last_name || 'Doe',
-    email: user?.email || 'john.doe@example.com',
-    phone: user?.phone || '+256 700 000 000',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
     location: 'Kampala, Uganda',
-    organization: user?.organization_name || 'Insurance Company Ltd',
-    role: user?.role ? user.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Organization Admin',
+    organization: '',
+    role: '',
     bio: 'Insurance professional with 5+ years experience in East African markets.',
   })
+
+  React.useEffect(() => {
+    if (user) {
+      const newForm = {
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        location: 'Kampala, Uganda',
+        organization: user.organization_name || 'Individual Client',
+        role: user.role ? user.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Client',
+        bio: user.bio || 'Securely managing my insurance portfolio with SHIELDS.',
+      }
+      setForm(newForm)
+      setDraft(newForm)
+    }
+  }, [user])
+
   const [draft, setDraft] = useState(form)
 
   const handleSave = () => {
@@ -65,26 +85,34 @@ export default function Profile() {
     setEditing(false)
   }
 
-  const initials = `${form.firstName[0] || ''}${form.lastName[0] || ''}`.toUpperCase()
+  const initials = `${form.firstName?.[0] || 'U'}${form.lastName?.[0] || ''}`.toUpperCase()
 
   const { data: memData } = useQuery({
     queryKey: ['profile-memberships', user?.id],
     queryFn: async () => (await tenancyAPI.getMemberships(user?.id)).data,
     enabled: !!user?.id,
   })
+
   const myMemId = memData?.items?.find((m) => m.organization_id === user?.organization_id)?.id
+  
   const { data: ledgerData } = useQuery({
     queryKey: ['profile-ledger', user?.organization_id, myMemId],
     queryFn: async () => (await commissionAPI.getLedger(user?.organization_id, myMemId)).data,
     enabled: !!user?.organization_id && !!myMemId,
   })
+
   const totalEarned = ledgerData?.items?.filter(l => l.entry_type === 'earned').reduce((s, l) => s + Number(l.amount), 0) || 0
   const ledgerCurrency = ledgerData?.items?.[0]?.currency || user?.currency || 'UGX'
 
-  const STATS = [
+  const isStaff = user?.role !== 'user' && user?.role !== 'customer'
+
+  const STATS = isStaff ? [
     { icon: PolicyIcon, label: 'Policies Managed', value: '24', color: '#1A73E8', bg: '#E8F0FE' },
     { icon: ClaimIcon, label: 'Claims Processed', value: '8', color: '#E37400', bg: '#FEF3E2' },
     { icon: CommIcon, label: 'Commission Earned', value: formatCurrencyShort(totalEarned, ledgerCurrency), color: '#1E8E3E', bg: '#E6F4EA' },
+  ] : [
+    { icon: PolicyIcon, label: 'Active Policies', value: '0', color: '#1A73E8', bg: '#E8F0FE' },
+    { icon: ClaimIcon, label: 'Active Claims', value: '0', color: '#E37400', bg: '#FEF3E2' },
   ]
 
   return (
@@ -98,7 +126,7 @@ export default function Profile() {
       </Box>
 
       {success && (
-        <Alert severity="success" sx={{ mb: 3, borderRadius: 2.5 }} onClose={() => setSuccess(false)}>
+        <Alert severity="success" sx={{ mb: 3, borderRadius: 0}} onClose={() => setSuccess(false)}>
           Profile updated successfully!
         </Alert>
       )}
@@ -150,7 +178,7 @@ export default function Profile() {
                   startIcon={<EditIcon />}
                   onClick={() => setEditing(true)}
                   fullWidth
-                  sx={{ borderRadius: 2.5, fontWeight: 600 }}
+                  sx={{ borderRadius: 0, fontWeight: 600 }}
                 >
                   Edit Profile
                 </Button>
@@ -168,7 +196,7 @@ export default function Profile() {
                 display: 'flex', alignItems: 'center', gap: 1.5,
                 mb: 2, '&:last-child': { mb: 0 },
               }}>
-                <Box sx={{ width: 36, height: 36, borderRadius: 2, bgcolor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Box sx={{ width: 36, height: 36, borderRadius: 0, bgcolor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Icon sx={{ fontSize: 18, color }} />
                 </Box>
                 <Box sx={{ flexGrow: 1 }}>
@@ -198,7 +226,7 @@ export default function Profile() {
                     variant="outlined" size="small"
                     startIcon={<CancelIcon />}
                     onClick={handleCancel}
-                    sx={{ borderRadius: 2, fontWeight: 600, color: '#5F6368', borderColor: '#DADCE0' }}
+                    sx={{ borderRadius: 0, fontWeight: 600, color: '#5F6368', borderColor: '#DADCE0' }}
                   >
                     Cancel
                   </Button>
@@ -206,7 +234,7 @@ export default function Profile() {
                     variant="contained" size="small"
                     startIcon={<SaveIcon />}
                     onClick={handleSave}
-                    sx={{ borderRadius: 2, fontWeight: 700 }}
+                    sx={{ borderRadius: 0, fontWeight: 700 }}
                   >
                     Save Changes
                   </Button>
@@ -269,8 +297,8 @@ export default function Profile() {
                   { label: 'Role', val: form.role, icon: ShieldIcon },
                 ].map(({ label, val, icon: Icon }) => (
                   <Grid item xs={12} sm={6} key={label}>
-                    <Box sx={{ p: 2, borderRadius: 2.5, bgcolor: '#F8F9FE', border: '1px solid #E8EAED', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Box sx={{ width: 36, height: 36, borderRadius: 2, bgcolor: '#E8F0FE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Box sx={{ p: 2, borderRadius: 0, bgcolor: '#F8F9FE', border: '1px solid #E8EAED', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Box sx={{ width: 36, height: 36, borderRadius: 0, bgcolor: '#E8F0FE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Icon sx={{ fontSize: 18, color: '#1A73E8' }} />
                       </Box>
                       <Box>

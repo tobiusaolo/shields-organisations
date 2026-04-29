@@ -75,7 +75,7 @@ const theme = createTheme({
     caption: { fontWeight: 400, letterSpacing: '0.02em' },
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: 0,
   },
   shadows: [
     'none',
@@ -108,7 +108,7 @@ const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 8,
+          borderRadius: 0,
           padding: '8px 20px',
           fontSize: '0.875rem',
           boxShadow: 'none',
@@ -126,7 +126,7 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 16,
+          borderRadius: 0,
           border: '1px solid #E8EAED',
           boxShadow: '0px 1px 3px rgba(0,0,0,0.06)',
         },
@@ -135,7 +135,7 @@ const theme = createTheme({
     MuiPaper: {
       styleOverrides: {
         root: {
-          borderRadius: 16,
+          borderRadius: 0,
           border: '1px solid #E8EAED',
         },
         elevation0: { boxShadow: 'none' },
@@ -145,7 +145,7 @@ const theme = createTheme({
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          borderRadius: 10,
+          borderRadius: 0,
           '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#1A73E8' },
         },
         notchedOutline: { borderColor: '#DADCE0' },
@@ -190,7 +190,7 @@ const theme = createTheme({
     MuiListItemButton: {
       styleOverrides: {
         root: {
-          borderRadius: 10,
+          borderRadius: 0,
           margin: '2px 8px',
           padding: '10px 12px',
           '&.Mui-selected': {
@@ -224,20 +224,20 @@ const theme = createTheme({
         tooltip: {
           backgroundColor: '#202124',
           fontSize: '0.75rem',
-          borderRadius: 6,
+          borderRadius: 0,
           fontWeight: 500,
         },
       },
     },
     MuiLinearProgress: {
       styleOverrides: {
-        root: { borderRadius: 4, height: 6 },
-        bar: { borderRadius: 4 },
+        root: { borderRadius: 0, height: 6 },
+        bar: { borderRadius: 0 },
       },
     },
     MuiAlert: {
       styleOverrides: {
-        root: { borderRadius: 10, fontWeight: 500 },
+        root: { borderRadius: 0, fontWeight: 500 },
       },
     },
   },

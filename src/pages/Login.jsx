@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   Box,
@@ -34,6 +34,7 @@ const ROLES = ['Platform Admin', 'Org Admin', 'Underwriter', 'Agent', 'Claims Of
 
 export default function Login() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -55,8 +56,15 @@ export default function Login() {
     }
     setLoading(true)
     try {
-      await login(email, password)
-      navigate('/')
+      const userData = await login(email, password)
+      const redirectTo = location.state?.redirectTo
+      if (redirectTo) {
+        navigate(redirectTo)
+      } else if (userData.role === 'client' || userData.role === 'user') {
+        navigate('/client/products')
+      } else {
+        navigate('/admin')
+      }
     } catch (err) {
       setError(err.message || 'Login failed. Please check your credentials.')
     } finally {
@@ -65,10 +73,10 @@ export default function Login() {
   }
 
   return (
-    <Box sx={{
-      minHeight: '100vh',
-      display: 'flex',
-      bgcolor: '#F8F9FE',
+    <Box sx={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      bgcolor: '#F8F9FA' 
     }}>
       {/* Left Panel — Branding */}
       <Box sx={{
@@ -77,73 +85,55 @@ export default function Login() {
         justifyContent: 'center',
         width: '42%',
         flexShrink: 0,
-        background: 'linear-gradient(145deg, #0D47A1 0%, #1A73E8 50%, #4A90F7 100%)',
+        bgcolor: '#FFFFFF',
+        borderRight: '1px solid #E8EAED',
         px: 6, py: 8,
         position: 'relative',
         overflow: 'hidden',
       }}>
-        {/* Background decoration */}
-        <Box sx={{
-          position: 'absolute', top: -60, right: -60,
-          width: 300, height: 300,
-          borderRadius: '50%',
-          border: '1px solid rgba(255,255,255,0.12)',
-        }} />
-        <Box sx={{
-          position: 'absolute', bottom: -80, left: -40,
-          width: 400, height: 400,
-          borderRadius: '50%',
-          border: '1px solid rgba(255,255,255,0.08)',
-        }} />
-        <Box sx={{
-          position: 'absolute', top: '40%', right: -20,
-          width: 200, height: 200,
-          borderRadius: '50%',
-          bgcolor: 'rgba(255,255,255,0.05)',
-        }} />
-
-        {/* Logo */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 6 }}>
-          <Box sx={{
-            width: 44, height: 44, borderRadius: 2.5,
-            bgcolor: 'rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(4px)',
+        <Box 
+          sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 10, cursor: 'pointer' }}
+          onClick={() => navigate('/')}
+        >
+          <Box sx={{ 
+            width: 44, height: 44, bgcolor: '#1A237E', borderRadius: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '1px solid rgba(255,255,255,0.25)',
+            boxShadow: '0 4px 12px rgba(26,35,126,0.25)'
           }}>
-            <ShieldIcon sx={{ color: 'white', fontSize: 24 }} />
+            <ShieldIcon sx={{ color: '#fff' }} />
           </Box>
           <Box>
-            <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: 'white', lineHeight: 1.2 }}>
-              SRTS Platform
+            <Typography sx={{ fontWeight: 800, fontSize: '1.2rem', color: '#1A237E', lineHeight: 1.2 }}>
+              SHIELDS
             </Typography>
-            <Typography sx={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', letterSpacing: '0.08em' }}>
-              INSURANCE OPERATIONS
+            <Typography sx={{ fontSize: '0.72rem', color: '#5F6368', letterSpacing: '0.08em', fontWeight: 700 }}>
+              INDUSTRIAL INSURANCE
             </Typography>
           </Box>
         </Box>
 
         <Box sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: '2.4rem', color: 'white', lineHeight: 1.15, mb: 2 }}>
+          <Typography sx={{ fontWeight: 900, fontSize: '3rem', color: '#1A237E', lineHeight: 1.1, mb: 3, letterSpacing: -1.5 }}>
             Insurance<br />Management<br />Made Simple
           </Typography>
-          <Typography sx={{ fontSize: '1rem', color: 'rgba(255,255,255,0.8)', mb: 5, lineHeight: 1.6, maxWidth: 360 }}>
+          <Typography sx={{ fontSize: '1.1rem', color: '#5F6368', mb: 6, lineHeight: 1.6, maxWidth: 400 }}>
             The industry-standard operations platform for East African insurers, brokers, and MGAs.
           </Typography>
 
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 6 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mb: 6 }}>
             {FEATURES.map((f) => (
-              <Box key={f.label} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box key={f.label} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Box sx={{
-                  width: 36, height: 36,
-                  borderRadius: 2,
-                  bgcolor: 'rgba(255,255,255,0.12)',
+                  width: 40, height: 40,
+                  borderRadius: 0,
+                  bgcolor: '#E8F0FE',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '1.1rem', flexShrink: 0,
+                  fontSize: '1.2rem', flexShrink: 0,
+                  color: '#1A237E'
                 }}>
                   {f.icon}
                 </Box>
-                <Typography sx={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)', fontWeight: 500 }}>
+                <Typography sx={{ fontSize: '1rem', color: '#202124', fontWeight: 600 }}>
                   {f.label}
                 </Typography>
               </Box>
@@ -151,7 +141,7 @@ export default function Login() {
           </Box>
 
           <Box>
-            <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', mb: 1.5, letterSpacing: '0.04em' }}>
+            <Typography sx={{ fontSize: '0.75rem', color: '#5F6368', mb: 1.5, letterSpacing: '0.04em', fontWeight: 700 }}>
               ROLE-BASED ACCESS
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -159,10 +149,10 @@ export default function Login() {
                 <Chip
                   key={r} label={r} size="small"
                   sx={{
-                    bgcolor: 'rgba(255,255,255,0.15)',
-                    color: 'rgba(255,255,255,0.9)',
-                    fontSize: '0.72rem', fontWeight: 500,
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    bgcolor: '#E8F0FE',
+                    color: '#1A237E',
+                    fontSize: '0.72rem', fontWeight: 700,
+                    borderRadius: 0,
                     height: 26,
                   }}
                 />
@@ -183,33 +173,36 @@ export default function Login() {
         py: 6,
       }}>
         {/* Mobile logo */}
-        <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 1.5, mb: 4 }}>
+        <Box 
+          sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 1.5, mb: 4, cursor: 'pointer' }}
+          onClick={() => navigate('/')}
+        >
           <Box sx={{
-            width: 36, height: 36, borderRadius: 2,
-            bgcolor: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 36, height: 36, borderRadius: 0,
+            bgcolor: '#1A237E', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <ShieldIcon sx={{ color: 'white', fontSize: 20 }} />
           </Box>
-          <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: '#202124' }}>
-            SRTS Platform
+          <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: '#000' }}>
+            SHIELDS
           </Typography>
         </Box>
 
         <Box sx={{ width: '100%', maxWidth: 420 }}>
           {/* Heading */}
           <Box sx={{ mb: 4 }}>
-            <Typography component="h1" sx={{ fontWeight: 800, fontSize: { xs: '1.75rem', sm: '2rem' }, color: '#202124', mb: 0.75 }}>
+            <Typography component="h1" sx={{ fontWeight: 900, fontSize: { xs: '1.75rem', sm: '2.5rem' }, color: '#000', mb: 0.75, letterSpacing: -1 }}>
               Welcome back
             </Typography>
-            <Typography sx={{ color: '#5F6368', fontSize: '0.95rem' }}>
-              Sign in to your organization account
+            <Typography sx={{ color: '#5F6368', fontSize: '1rem', fontWeight: 500 }}>
+              Industrial intelligence for modern underwriting.
             </Typography>
           </Box>
 
           {error && (
             <Alert
               severity="error"
-              sx={{ mb: 3, borderRadius: 2.5, fontSize: '0.85rem' }}
+              sx={{ mb: 3, borderRadius: 0, fontSize: '0.85rem' }}
               onClose={() => setError('')}
             >
               {error}
@@ -312,27 +305,16 @@ export default function Login() {
 
             {/* Submit */}
             <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              size="large"
-              disabled={loading}
+              type="submit" fullWidth variant="contained" size="large" disabled={loading}
               endIcon={!loading && <ArrowForwardIcon />}
               sx={{
-                py: 1.5,
-                fontSize: '0.95rem',
-                fontWeight: 700,
-                borderRadius: 2.5,
-                background: 'linear-gradient(135deg, #1A73E8 0%, #1557B0 100%)',
-                boxShadow: '0 4px 16px rgba(26,115,232,0.35)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #1557B0 0%, #0D47A1 100%)',
-                  boxShadow: '0 6px 20px rgba(26,115,232,0.45)',
-                },
+                py: 1.75, fontSize: '1rem', fontWeight: 700, borderRadius: 0,
+                bgcolor: '#1A237E', boxShadow: 'none',
+                '&:hover': { bgcolor: '#0d1b6e', boxShadow: 'none' },
                 '&:disabled': { opacity: 0.7 },
               }}
             >
-              {loading ? <CircularProgress size={22} color="inherit" /> : 'Sign In'}
+              {loading ? <CircularProgress size={22} color="inherit" /> : 'Sign in'}
             </Button>
           </Box>
 
@@ -342,13 +324,16 @@ export default function Login() {
               Don&apos;t have an account?{' '}
               <Typography
                 component="span"
-                onClick={() => navigate('/register')}
+                onClick={() => {
+                   const isClient = window.location.pathname.includes('/client')
+                   navigate(isClient ? '/client/register' : '/admin/register')
+                }}
                 sx={{
-                  fontWeight: 700, color: 'primary.main', cursor: 'pointer',
+                  fontWeight: 800, color: '#1A73E8', cursor: 'pointer',
                   '&:hover': { textDecoration: 'underline' },
                 }}
               >
-                Register your organization
+                Create an account
               </Typography>
             </Typography>
           </Box>

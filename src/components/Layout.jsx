@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -53,26 +53,26 @@ import {
 const drawerWidth = 264
 
 const NAV_ITEMS = [
-  { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
-  { label: 'Policies', path: '/policies', icon: <DescriptionIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'senior_agent', 'underwriter', 'read_only', 'claims_officer'] },
-  { label: 'Claims', path: '/claims', icon: <AssignmentIcon />, roles: ['admin', 'organization_admin', 'claims_officer', 'underwriter', 'broker', 'read_only'] },
-  { label: 'Commissions', path: '/commissions', icon: <PaymentsIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'senior_agent', 'team_lead'] },
-  { label: 'Products', path: '/products', icon: <ProductIcon />, roles: ['admin', 'organization_admin', 'underwriter'] },
-  { label: 'Policy Ledger', path: '/ledger', icon: <PaymentsIcon />, roles: ['admin', 'organization_admin'] },
-  { label: 'Clients', path: '/clients', icon: <PersonIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'senior_agent', 'underwriter'] },
+  { label: 'Dashboard', path: '/admin', icon: <DashboardIcon /> },
+  { label: 'Policies', path: '/admin/policies', icon: <DescriptionIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'senior_agent', 'underwriter', 'read_only', 'claims_officer'] },
+  { label: 'Claims', path: '/admin/claims', icon: <AssignmentIcon />, roles: ['admin', 'organization_admin', 'claims_officer', 'underwriter', 'broker', 'read_only'] },
+  { label: 'Commissions', path: '/admin/commissions', icon: <PaymentsIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'senior_agent', 'team_lead'] },
+  { label: 'Products', path: '/admin/products', icon: <ProductIcon />, roles: ['admin', 'organization_admin', 'underwriter'] },
+  { label: 'Policy Ledger', path: '/admin/ledger', icon: <PaymentsIcon />, roles: ['admin', 'organization_admin'] },
+  { label: 'Clients', path: '/admin/clients', icon: <PersonIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'senior_agent', 'underwriter'] },
 ]
 
 const SECONDARY_NAV = [
-  { label: 'Team', path: '/team', icon: <AccountCircleIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
-  { label: 'KYC Verification', path: '/kyc', icon: <SecurityIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
-  { label: 'Promotions', path: '/promotions', icon: <PromotionIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
-  { label: 'Settings', path: '/settings', icon: <SettingsIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
+  { label: 'Team', path: '/admin/team', icon: <AccountCircleIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
+  { label: 'KYC Verification', path: '/admin/kyc', icon: <SecurityIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
+  { label: 'Promotions', path: '/admin/promotions', icon: <PromotionIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
+  { label: 'Settings', path: '/admin/settings', icon: <SettingsIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
 ]
 
 function NotificationDot({ color = '#EA4335' }) {
   return (
     <Box sx={{
-      width: 8, height: 8, borderRadius: '50%',
+      width: 8, height: 8, borderRadius: 0,
       bgcolor: color, display: 'inline-block', flexShrink: 0,
     }} />
   )
@@ -85,11 +85,11 @@ export default function Layout({ children }) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
-  const [mobileOpen, setMobileOpen] = React.useState(false)
-  const [profileAnchor, setProfileAnchor] = React.useState(null)
-  const [notifAnchor, setNotifAnchor] = React.useState(null)
-  const [searchValue, setSearchValue] = React.useState('')
-  const [logoutLoading, setLogoutLoading] = React.useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [profileAnchor, setProfileAnchor] = useState(null)
+  const [notifAnchor, setNotifAnchor] = useState(null)
+  const [searchValue, setSearchValue] = useState('')
+  const [logoutLoading, setLogoutLoading] = useState(false)
 
   const notifications = [
     { id: 1, text: 'KYC verification pending review', time: '5 min ago', unread: true, type: 'warning' },
@@ -104,7 +104,7 @@ export default function Layout({ children }) {
     setLogoutLoading(true)
     try {
       await logout()
-      navigate('/login')
+      navigate('/')
     } finally {
       setLogoutLoading(false)
     }
@@ -135,10 +135,10 @@ export default function Layout({ children }) {
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box sx={{
-            width: 36, height: 36, borderRadius: 2,
-            bgcolor: user?.logo ? 'transparent' : 'primary.main', 
+            width: 36, height: 36, borderRadius: 0,
+            bgcolor: user?.logo ? 'transparent' : '#000', 
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: user?.logo ? 'none' : '0 2px 8px rgba(26,115,232,0.35)',
+            boxShadow: user?.logo ? 'none' : '0 2px 8px rgba(0,0,0,0.2)',
             overflow: 'hidden',
           }}>
             {user?.logo ? (
@@ -156,7 +156,7 @@ export default function Layout({ children }) {
                 lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', 
                 whiteSpace: 'nowrap', maxWidth: user?.kyc_status === 'verified' ? 120 : 150 
               }}>
-                {user?.organization_name || 'SRTS Platform'}
+                {user?.organization_name || 'SHIELDS'}
               </Typography>
               {user?.kyc_status === 'verified' && (
                 <Tooltip title="Verified Organization">
@@ -206,11 +206,11 @@ export default function Layout({ children }) {
                   primary={item.label}
                   primaryTypographyProps={{
                     fontSize: '0.875rem',
-                    fontWeight: active ? 600 : 500,
-                    color: active ? 'primary.main' : '#202124',
+                    fontWeight: active ? 700 : 500,
+                    color: active ? '#1A237E' : '#202124',
                   }}
                 />
-                {active && <ChevronRightIcon sx={{ fontSize: 16, color: 'primary.main', opacity: 0.6 }} />}
+                {active && <ChevronRightIcon sx={{ fontSize: 16, color: '#1A237E', opacity: 0.6 }} />}
               </ListItemButton>
             )
           })}
@@ -263,12 +263,12 @@ export default function Layout({ children }) {
         display: 'flex', alignItems: 'center', gap: 1.5,
         cursor: 'pointer',
         '&:hover': { bgcolor: '#F8F9FE' },
-        borderRadius: '0 0 0 0',
+        borderRadius: 0,
         transition: 'background 0.2s',
       }}
         onClick={(e) => setProfileAnchor(e.currentTarget)}
       >
-        <Avatar sx={{ width: 36, height: 36, bgcolor: '#1A73E8', fontSize: '0.9rem', fontWeight: 700 }}>
+        <Avatar variant="square" sx={{ width: 36, height: 36, bgcolor: '#000', borderRadius: 0, fontSize: '0.9rem', fontWeight: 700 }}>
           {userInitials}
         </Avatar>
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
@@ -286,15 +286,15 @@ export default function Layout({ children }) {
 
   const getPageTitle = () => {
     const path = location.pathname
-    if (path === '/') return 'Dashboard'
-    if (path.startsWith('/policies')) return 'Policies'
-    if (path.startsWith('/claims')) return 'Claims'
-    if (path.startsWith('/commissions')) return 'Commissions'
-    if (path.startsWith('/kyc')) return 'KYC Verification'
-    if (path.startsWith('/settings')) return 'Settings'
-    if (path.startsWith('/profile')) return 'Profile'
-    if (path.startsWith('/ledger')) return 'Policy Ledger'
-    return 'Insurance Platform'
+    if (path === '/admin') return 'Dashboard'
+    if (path.startsWith('/admin/policies')) return 'Policies'
+    if (path.startsWith('/admin/claims')) return 'Claims'
+    if (path.startsWith('/admin/commissions')) return 'Commissions'
+    if (path.startsWith('/admin/kyc')) return 'KYC Verification'
+    if (path.startsWith('/admin/settings')) return 'Settings'
+    if (path.startsWith('/admin/profile')) return 'Profile'
+    if (path.startsWith('/admin/ledger')) return 'Policy Ledger'
+    return 'SHIELDS'
   }
 
   return (
@@ -424,10 +424,10 @@ export default function Layout({ children }) {
                 onClick={(e) => setProfileAnchor(e.currentTarget)}
                 sx={{ ml: 0.5, p: 0.5 }}
               >
-                <Avatar sx={{
-                  width: 34, height: 34, bgcolor: '#1A73E8',
+                <Avatar variant="square" sx={{
+                  width: 34, height: 34, bgcolor: '#000', borderRadius: 0,
                   fontSize: '0.8rem', fontWeight: 700,
-                  border: Boolean(profileAnchor) ? '2px solid #1A73E8' : '2px solid transparent',
+                  border: Boolean(profileAnchor) ? '2px solid #1A237E' : '2px solid transparent',
                   transition: 'border 0.2s',
                 }}>
                   {userInitials}
@@ -447,7 +447,7 @@ export default function Layout({ children }) {
           PaperProps={{
             sx: {
               width: 360, mt: 1,
-              borderRadius: 3, border: '1px solid #E8EAED',
+              borderRadius: 0, border: '1px solid #000',
               boxShadow: '0px 8px 32px rgba(0,0,0,0.12)',
               overflow: 'hidden',
             },
@@ -501,7 +501,7 @@ export default function Layout({ children }) {
           PaperProps={{
             sx: {
               width: 240, mt: 1,
-              borderRadius: 3, border: '1px solid #E8EAED',
+              borderRadius: 0, border: '1px solid #000',
               boxShadow: '0px 8px 32px rgba(0,0,0,0.12)',
             },
           }}
@@ -509,7 +509,7 @@ export default function Layout({ children }) {
           {/* User info header */}
           <Box sx={{ px: 2.5, py: 2, borderBottom: '1px solid #E8EAED' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-              <Avatar sx={{ width: 40, height: 40, bgcolor: '#1A73E8', fontWeight: 700 }}>{userInitials}</Avatar>
+              <Avatar variant="square" sx={{ width: 40, height: 40, bgcolor: '#000', borderRadius: 0, fontWeight: 700 }}>{userInitials}</Avatar>
               <Box>
                 <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#202124', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>
                   {user?.first_name ? `${user.first_name} ${user.last_name || ''}` : (user?.email || 'User')}

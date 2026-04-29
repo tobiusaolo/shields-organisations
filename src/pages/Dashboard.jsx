@@ -74,9 +74,9 @@ function StatusBadge({ status }) {
     <Box sx={{
       display: 'inline-flex', alignItems: 'center', gap: 0.6,
       px: 1.25, py: 0.4,
-      borderRadius: 6, bgcolor: cfg.bg,
+      borderRadius: 0, bgcolor: cfg.bg,
     }}>
-      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: cfg.dot }} />
+      <Box sx={{ width: 6, height: 6, borderRadius: 0, bgcolor: cfg.dot }} />
       <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: cfg.color, lineHeight: 1 }}>
         {cfg.label}
       </Typography>
@@ -100,14 +100,14 @@ function KPICard({ title, icon: Icon, color, bg, trend, trendVal, trendLabel, va
     >
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-          <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Box sx={{ width: 44, height: 44, borderRadius: 0, bgcolor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Icon sx={{ fontSize: 22, color }} />
           </Box>
           <Box sx={{
             display: 'flex', alignItems: 'center', gap: 0.4,
             px: 1, py: 0.35,
             bgcolor: trend === 'up' ? '#E6F4EA' : '#FCE8E6',
-            borderRadius: 6,
+            borderRadius: 0,
           }}>
             {trend === 'up'
               ? <ArrowUpIcon sx={{ fontSize: 12, color: '#1E8E3E' }} />
@@ -144,7 +144,7 @@ function KPICard({ title, icon: Icon, color, bg, trend, trendVal, trendLabel, va
 const CustomTooltipRevenue = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <Box sx={{ bgcolor: '#202124', color: '#fff', px: 2, py: 1.5, borderRadius: 2, boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>
+    <Box sx={{ bgcolor: '#202124', color: '#fff', px: 2, py: 1.5, borderRadius: 0, boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>
       <Typography sx={{ fontWeight: 700, fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
       {payload.map((p) => (
         <Typography key={p.dataKey} sx={{ fontSize: '0.75rem', color: p.color }}>
@@ -266,7 +266,7 @@ export default function Dashboard() {
                 <Avatar 
                     src={user?.logo} 
                     variant="rounded" 
-                    sx={{ width: 64, height: 64, bgcolor: '#FFFFFF', border: '1px solid #E8EAED', borderRadius: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }} 
+                    sx={{ width: 64, height: 64, bgcolor: '#FFFFFF', border: '1px solid #E8EAED', borderRadius: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }} 
                 >
                     <VerifiedIcon sx={{ color: '#E8EAED', fontSize: 32 }} />
                 </Avatar>
@@ -308,7 +308,7 @@ export default function Dashboard() {
             <Select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              sx={{ bgcolor: '#fff', fontSize: '0.85rem', borderRadius: 3, border: '1px solid #E8EAED' }}
+              sx={{ bgcolor: '#fff', fontSize: '0.85rem', borderRadius: 0, border: '1px solid #E8EAED' }}
             >
               <MenuItem value="7d">Last 7 days</MenuItem>
               <MenuItem value="30d">Last 30 days</MenuItem>
@@ -319,7 +319,7 @@ export default function Dashboard() {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => navigate('/policies')}
-            sx={{ borderRadius: 3, fontWeight: 700, px: 3, boxShadow: '0 4px 12px rgba(26,115,232,0.2)' }}
+            sx={{ borderRadius: 0, fontWeight: 700, px: 3, boxShadow: '0 4px 12px rgba(26,115,232,0.2)' }}
           >
             New Policy
           </Button>
@@ -340,7 +340,7 @@ export default function Dashboard() {
       {/* Analytics Row */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} lg={isManagement ? 8 : 12}>
-          <Paper elevation={0} sx={{ p: 4, borderRadius: 5, border: '1px solid #E8EAED' }}>
+          <Paper elevation={0} sx={{ p: 4, borderRadius: 0, border: '1px solid #E8EAED' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
               <Box>
                 <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: '#202124' }}>
@@ -352,7 +352,7 @@ export default function Dashboard() {
               </Box>
             </Box>
             {loading ? (
-              <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 4 }} />
+              <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 0}} />
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={CHART_DATA} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
@@ -375,7 +375,7 @@ export default function Dashboard() {
 
         {isManagement && (
             <Grid item xs={12} lg={4}>
-            <Paper elevation={0} sx={{ p: 4, borderRadius: 5, border: '1px solid #E8EAED', height: '100%' }}>
+            <Paper elevation={0} sx={{ p: 4, borderRadius: 0, border: '1px solid #E8EAED', height: '100%' }}>
                 <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', color: '#202124', mb: 0.5 }}>
                 Portfolio Mix
                 </Typography>
@@ -406,7 +406,7 @@ export default function Dashboard() {
                     {PIE_DATA.map((item, i) => (
                         <Box key={item.name} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Box sx={{ width: 12, height: 12, borderRadius: 3, bgcolor: PIE_COLORS[i] }} />
+                            <Box sx={{ width: 12, height: 12, borderRadius: 0, bgcolor: PIE_COLORS[i] }} />
                             <Typography sx={{ fontSize: '0.85rem', color: '#5F6368', fontWeight: 500 }}>{item.name}</Typography>
                         </Box>
                         <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, color: '#202124' }}>{item.value}%</Typography>
@@ -423,7 +423,7 @@ export default function Dashboard() {
       {/* Tables Row */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} lg={6}>
-          <Paper elevation={0} sx={{ borderRadius: 5, border: '1px solid #E8EAED', overflow: 'hidden' }}>
+          <Paper elevation={0} sx={{ borderRadius: 0, border: '1px solid #E8EAED', overflow: 'hidden' }}>
             <Box sx={{ px: 4, py: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F3F4' }}>
               <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: '#202124' }}>Recent Policies</Typography>
               <Button size="small" onClick={() => navigate('/policies')} sx={{ fontWeight: 700 }}>View All</Button>
@@ -445,7 +445,7 @@ export default function Dashboard() {
           </Paper>
         </Grid>
         <Grid item xs={12} lg={6}>
-          <Paper elevation={0} sx={{ borderRadius: 5, border: '1px solid #E8EAED', overflow: 'hidden' }}>
+          <Paper elevation={0} sx={{ borderRadius: 0, border: '1px solid #E8EAED', overflow: 'hidden' }}>
             <Box sx={{ px: 4, py: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F3F4' }}>
               <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: '#202124' }}>Recent Claims</Typography>
               <Button size="small" onClick={() => navigate('/claims')} sx={{ fontWeight: 700 }}>View All</Button>
@@ -472,7 +472,7 @@ export default function Dashboard() {
       {user?.kyc_status !== 'verified' && (
         <Fade in={true} timeout={1000}>
             <Paper elevation={0} sx={{
-                p: 4, borderRadius: 5,
+                p: 4, borderRadius: 0,
                 background: user?.kyc_status === 'submitted' 
                     ? 'linear-gradient(135deg, #FFF8E1 0%, #FFFDE7 100%)' 
                     : 'linear-gradient(135deg, #FCE8E6 0%, #FEF7F6 100%)',
@@ -480,7 +480,7 @@ export default function Dashboard() {
                 display: 'flex', alignItems: 'center', gap: 3,
             }}>
                 <Box sx={{ 
-                    width: 56, height: 56, borderRadius: 3, 
+                    width: 56, height: 56, borderRadius: 0, 
                     bgcolor: user?.kyc_status === 'submitted' ? '#F9AB00' : '#D93025', 
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 
                 }}>
@@ -500,7 +500,7 @@ export default function Dashboard() {
                     variant="contained" 
                     onClick={() => navigate('/kyc')}
                     sx={{ 
-                        borderRadius: 3, fontWeight: 700, px: 4, 
+                        borderRadius: 0, fontWeight: 700, px: 4, 
                         bgcolor: user?.kyc_status === 'submitted' ? '#F9AB00' : '#D93025',
                         '&:hover': { bgcolor: user?.kyc_status === 'submitted' ? '#E37400' : '#C5221F' }
                     }}

@@ -64,8 +64,8 @@ const TYPE_CFG = {
 function StatusBadge({ status }) {
   const cfg = STATUS_CFG[status] || { label: status, color: '#5F6368', bg: '#F1F3F4', dot: '#9AA0A6' }
   return (
-    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.6, px: 1.25, py: 0.4, borderRadius: 6, bgcolor: cfg.bg }}>
-      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: cfg.dot }} />
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.6, px: 1.25, py: 0.4, borderRadius: 0, bgcolor: cfg.bg }}>
+      <Box sx={{ width: 6, height: 6, borderRadius: 0, bgcolor: cfg.dot }} />
       <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: cfg.color, lineHeight: 1 }}>{cfg.label}</Typography>
     </Box>
   )
@@ -124,7 +124,7 @@ export default function Commissions() {
           <Typography variant="h4" sx={{ fontWeight: 800, color: '#202124', mb: 0.5 }}>Commissions</Typography>
           <Typography sx={{ color: '#5F6368', fontSize: '0.9rem' }}>Agent commission ledger and payout tracking</Typography>
         </Box>
-        <Button variant="outlined" startIcon={<AddIcon />} sx={{ borderRadius: 2.5, fontWeight: 700 }}>
+        <Button variant="outlined" startIcon={<AddIcon />} sx={{ borderRadius: 0, fontWeight: 700 }}>
           Request Payout
         </Button>
       </Box>
@@ -143,7 +143,7 @@ export default function Commissions() {
               '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(0,0,0,0.10)' },
             }}>
               <CardContent sx={{ p: 2.5 }}>
-                <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1.5 }}>
+                <Box sx={{ width: 40, height: 40, borderRadius: 0, bgcolor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1.5 }}>
                   <Icon sx={{ fontSize: 20, color }} />
                 </Box>
                 {loading
@@ -166,14 +166,14 @@ export default function Commissions() {
             <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#202124', mb: 0.5 }}>Monthly Earnings</Typography>
             <Typography sx={{ fontSize: '0.8rem', color: '#5F6368', mb: 2.5 }}>Last 6 months commission trend</Typography>
             {loading
-              ? <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2 }} />
+              ? <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 0}} />
               : (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={CHART_DATA} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
                     <CartesianGrid strokeDasharray="4 4" stroke="#F1F3F4" vertical={false} />
                     <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9AA0A6' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 12, fill: '#9AA0A6' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}K`} />
-                    <RTooltip formatter={(v) => [formatCurrency(v, user?.currency), 'Commission']} contentStyle={{ borderRadius: 8, border: '1px solid #E8EAED', fontSize: '0.8rem' }} />
+                    <RTooltip formatter={(v) => [formatCurrency(v, user?.currency), 'Commission']} contentStyle={{ borderRadius: 0, border: '1px solid #E8EAED', fontSize: '0.8rem' }} />
                     <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
                       {CHART_DATA.map((_, i) => (
                         <Cell key={i} fill={i === CHART_DATA.length - 1 ? '#1A73E8' : '#C5D4F5'} />
@@ -192,7 +192,7 @@ export default function Commissions() {
             <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#202124', mb: 0.5 }}>Payout Progress</Typography>
             <Typography sx={{ fontSize: '0.8rem', color: '#5F6368', mb: 3 }}>January 2024 statement</Typography>
             {loading
-              ? <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 2 }} />
+              ? <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 0}} />
               : (
                 <>
                   <Box sx={{ mb: 3 }}>

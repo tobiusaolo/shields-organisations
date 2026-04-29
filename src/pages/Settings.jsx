@@ -86,7 +86,7 @@ function SettingsSection({ icon: Icon, title, subtitle, color, bg, children }) {
         p: 3, borderBottom: '1px solid #E8EAED',
         display: 'flex', alignItems: 'center', gap: 2,
       }}>
-        <Box sx={{ width: 40, height: 40, borderRadius: 2.5, bgcolor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Box sx={{ width: 40, height: 40, borderRadius: 0, bgcolor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Icon sx={{ fontSize: 20, color }} />
         </Box>
         <Box>
@@ -220,14 +220,14 @@ export default function Settings() {
           variant="contained"
           startIcon={<SaveIcon />}
           onClick={handleSave}
-          sx={{ borderRadius: 2.5, fontWeight: 700 }}
+          sx={{ borderRadius: 0, fontWeight: 700 }}
         >
           Save Changes
         </Button>
       </Box>
 
       {success && (
-        <Alert severity="success" sx={{ mb: 3, borderRadius: 2.5 }} onClose={() => setSuccess(false)}>
+        <Alert severity="success" sx={{ mb: 3, borderRadius: 0}} onClose={() => setSuccess(false)}>
           Settings saved successfully!
         </Alert>
       )}
@@ -302,7 +302,7 @@ export default function Settings() {
                 startIcon={<LockIcon />}
                 fullWidth
                 sx={{
-                  borderRadius: 2.5, fontWeight: 700,
+                  borderRadius: 0, fontWeight: 700,
                   mb: 1.5, color: '#202124', borderColor: '#E8EAED',
                   '&:hover': { borderColor: '#1A73E8', color: '#1A73E8' },
                 }}
@@ -313,7 +313,7 @@ export default function Settings() {
                 variant="outlined"
                 fullWidth
                 sx={{
-                  borderRadius: 2.5, fontWeight: 700,
+                  borderRadius: 0, fontWeight: 700,
                   color: '#D93025', borderColor: '#FCCAC8',
                   '&:hover': { bgcolor: '#FCE8E6', borderColor: '#EA4335' },
                 }}
@@ -419,7 +419,7 @@ export default function Settings() {
                   <Tooltip key={color} title={label}>
                     <Box sx={{
                       width: 28, height: 28,
-                      borderRadius: '50%', bgcolor: color,
+                      borderRadius: 0, bgcolor: color,
                       cursor: 'pointer',
                       boxShadow: active ? `0 0 0 3px white, 0 0 0 5px ${color}` : 'none',
                       transition: 'box-shadow 0.2s',
@@ -469,7 +469,7 @@ export default function Settings() {
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#f8f9fa', p: 1.5, borderRadius: 1.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#f8f9fa', p: 1.5, borderRadius: 0}}>
                     <Box>
                       <Typography sx={{ fontSize: '0.88rem', fontWeight: 500 }}>Sandbox Mode</Typography>
                       <Typography sx={{ fontSize: '0.75rem', color: '#5F6368' }}>Use PesaPal demo environment</Typography>
@@ -540,7 +540,7 @@ export default function Settings() {
       <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid #E8EAED', display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
         <Button
           variant="outlined"
-          sx={{ borderRadius: 2.5, fontWeight: 600, color: '#5F6368', borderColor: '#DADCE0' }}
+          sx={{ borderRadius: 0, fontWeight: 600, color: '#5F6368', borderColor: '#DADCE0' }}
         >
           Reset to Defaults
         </Button>
@@ -548,7 +548,7 @@ export default function Settings() {
           variant="contained"
           startIcon={<SaveIcon />}
           onClick={handleSave}
-          sx={{ borderRadius: 2.5, fontWeight: 700, px: 4 }}
+          sx={{ borderRadius: 0, fontWeight: 700, px: 4 }}
         >
           Save All Settings
         </Button>

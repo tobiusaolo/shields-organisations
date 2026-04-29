@@ -61,7 +61,7 @@ const ColorConnector = styled(StepConnector)(({ theme }) => ({
   [`& .${stepConnectorClasses.line}`]: {
     height: 3, border: 0,
     backgroundColor: '#E8EAED',
-    borderRadius: 2,
+    borderRadius: 0,
   },
 }))
 
@@ -70,7 +70,7 @@ function ColorStepIcon({ active, completed, icon, step }) {
   return (
     <Box sx={{
       width: 48, height: 48,
-      borderRadius: '50%',
+      borderRadius: 0,
       bgcolor: completed ? '#1E8E3E' : active ? '#1A73E8' : '#F8F9FA',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       boxShadow: active ? '0 0 0 4px rgba(26,115,232,0.15)' : 'none',
@@ -88,7 +88,7 @@ function ColorStepIcon({ active, completed, icon, step }) {
 function SectionHeader({ icon: Icon, title, subtitle }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-      <Box sx={{ width: 48, height: 48, borderRadius: 3, bgcolor: '#E8F0FE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box sx={{ width: 48, height: 48, borderRadius: 0, bgcolor: '#E8F0FE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Icon sx={{ fontSize: 24, color: '#1A73E8' }} />
       </Box>
       <Box>
@@ -304,7 +304,7 @@ export default function KYC() {
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
           <Box sx={{ textAlign: 'center', maxWidth: 480 }}>
             <Box sx={{
-                width: 100, height: 100, borderRadius: '50%', bgcolor: '#E6F4EA',
+                width: 100, height: 100, borderRadius: 0, bgcolor: '#E6F4EA',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 mx: 'auto', mb: 4,
                 boxShadow: '0 8px 24px rgba(30,142,62,0.15)',
@@ -320,7 +320,7 @@ export default function KYC() {
             <Button 
                 variant="contained" 
                 onClick={() => navigate('/')}
-                sx={{ borderRadius: 3, px: 6, py: 1.5, fontWeight: 700 }}
+                sx={{ borderRadius: 0, px: 6, py: 1.5, fontWeight: 700 }}
             >
               Go to Dashboard
             </Button>
@@ -336,7 +336,7 @@ export default function KYC() {
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
           <Box sx={{ textAlign: 'center', maxWidth: 520 }}>
             <Box sx={{
-              width: 120, height: 120, borderRadius: '50%', bgcolor: '#FFF8E1',
+              width: 120, height: 120, borderRadius: 0, bgcolor: '#FFF8E1',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               mx: 'auto', mb: 4,
               animation: 'pulse 2s ease-in-out infinite',
@@ -350,7 +350,7 @@ export default function KYC() {
             <Typography sx={{ color: '#5F6368', fontSize: '1rem', mb: 4, lineHeight: 1.6 }}>
               We've received your KYC documents. Our compliance team is currently reviewing your business information and company logo. This process typically takes **24-48 hours**.
             </Typography>
-            <Box sx={{ p: 3, bgcolor: '#F8F9FA', borderRadius: 4, border: '1px solid #E8EAED', display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'center' }}>
+            <Box sx={{ p: 3, bgcolor: '#F8F9FA', borderRadius: 0, border: '1px solid #E8EAED', display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'center' }}>
                 <CircularProgress size={18} />
                 <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#202124' }}>
                   Awaiting Super Admin Approval
@@ -377,7 +377,7 @@ export default function KYC() {
                 src={form.logo} 
                 sx={{ 
                     width: 140, height: 140, 
-                    borderRadius: 4, 
+                    borderRadius: 0, 
                     bgcolor: '#F8F9FA', 
                     border: '2px dashed #DADCE0',
                     fontSize: '2rem'
@@ -435,7 +435,7 @@ export default function KYC() {
       <Grid item xs={12}>
         <Box sx={{
           border: '2px dashed #DADCE0',
-          borderRadius: 4, p: 6,
+          borderRadius: 0, p: 6,
           textAlign: 'center', cursor: 'pointer',
           bgcolor: '#FAFBFF', transition: 'all 0.2s',
           '&:hover': { borderColor: '#1A73E8', bgcolor: '#F0F4FF' },
@@ -450,7 +450,7 @@ export default function KYC() {
       </Grid>
       {form.documents.map((doc, i) => (
         <Grid item xs={12} key={i}>
-            <Paper elevation={0} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, border: '1px solid #E8EAED', borderRadius: 3 }}>
+            <Paper elevation={0} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, border: '1px solid #E8EAED', borderRadius: 0}}>
                 <DocIcon sx={{ color: '#1A73E8' }} />
                 <Typography sx={{ flexGrow: 1, fontWeight: 600, fontSize: '0.85rem' }}>{doc.name}</Typography>
                 <IconButton size="small" onClick={() => update('documents', form.documents.filter((_, j) => j !== i))}>
@@ -505,8 +505,7 @@ export default function KYC() {
             cursor: 'pointer', 
             border: form.payment_config.accepts_mobile_money ? '2px solid #1A73E8' : '1px solid #E8EAED',
             bgcolor: form.payment_config.accepts_mobile_money ? '#E8F0FE' : '#fff',
-            borderRadius: 3
-          }}
+            borderRadius: 0}}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <MobileIcon sx={{ color: form.payment_config.accepts_mobile_money ? '#1A73E8' : '#5F6368', fontSize: 32 }} />
@@ -526,8 +525,7 @@ export default function KYC() {
             cursor: 'pointer', 
             border: form.payment_config.accepts_bank_transfer ? '2px solid #1A73E8' : '1px solid #E8EAED',
             bgcolor: form.payment_config.accepts_bank_transfer ? '#E8F0FE' : '#fff',
-            borderRadius: 3
-          }}
+            borderRadius: 0}}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <BankIcon sx={{ color: form.payment_config.accepts_bank_transfer ? '#1A73E8' : '#5F6368', fontSize: 32 }} />
@@ -547,8 +545,7 @@ export default function KYC() {
             cursor: 'pointer', 
             border: form.payment_config.accepts_card ? '2px solid #1A73E8' : '1px solid #E8EAED',
             bgcolor: form.payment_config.accepts_card ? '#E8F0FE' : '#fff',
-            borderRadius: 3
-          }}
+            borderRadius: 0}}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <CardIcon sx={{ color: form.payment_config.accepts_card ? '#1A73E8' : '#5F6368', fontSize: 32 }} />
@@ -610,11 +607,11 @@ export default function KYC() {
             <SectionHeader icon={VerifiedIcon} title="Final Review" subtitle="Ensure all details are correct before sending for approval" />
         </Grid>
         <Grid item xs={12} md={4}>
-            <Card elevation={0} sx={{ bgcolor: '#F8F9FA', borderRadius: 4, height: '100%' }}>
+            <Card elevation={0} sx={{ bgcolor: '#F8F9FA', borderRadius: 0, height: '100%' }}>
                 <CardContent sx={{ p: 3 }}>
                     <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', mb: 2.5, color: '#1A73E8' }}>Profile Summary</Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                        <Avatar src={form.logo} variant="rounded" sx={{ width: 64, height: 64, borderRadius: 2 }} />
+                        <Avatar src={form.logo} variant="rounded" sx={{ width: 64, height: 64, borderRadius: 0}} />
                         <Box>
                             <Typography sx={{ fontWeight: 700, fontSize: '1rem' }}>{form.registration_name}</Typography>
                             <Typography sx={{ fontSize: '0.75rem', color: '#5F6368' }}>TIN: {form.tax_id}</Typography>
@@ -630,7 +627,7 @@ export default function KYC() {
             </Card>
         </Grid>
         <Grid item xs={12} md={4}>
-            <Card elevation={0} sx={{ bgcolor: '#F8F9FA', borderRadius: 4, height: '100%' }}>
+            <Card elevation={0} sx={{ bgcolor: '#F8F9FA', borderRadius: 0, height: '100%' }}>
                 <CardContent sx={{ p: 3 }}>
                     <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', mb: 2.5, color: '#1A73E8' }}>Documents ({form.documents.length})</Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -644,7 +641,7 @@ export default function KYC() {
             </Card>
         </Grid>
         <Grid item xs={12} md={4}>
-            <Card elevation={0} sx={{ bgcolor: '#F8F9FA', borderRadius: 4, height: '100%' }}>
+            <Card elevation={0} sx={{ bgcolor: '#F8F9FA', borderRadius: 0, height: '100%' }}>
                 <CardContent sx={{ p: 3 }}>
                     <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', mb: 2.5, color: '#1A73E8' }}>Payment Setup</Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -673,7 +670,7 @@ export default function KYC() {
         </Typography>
       </Box>
 
-      <Paper elevation={0} sx={{ border: '1px solid #E8EAED', borderRadius: 5, overflow: 'hidden', mb: 4 }}>
+      <Paper elevation={0} sx={{ border: '1px solid #E8EAED', borderRadius: 0, overflow: 'hidden', mb: 4 }}>
         <Box sx={{ p: { xs: 3, sm: 5 }, bgcolor: '#F8F9FA', borderBottom: '1px solid #E8EAED' }}>
             <Stepper activeStep={activeStep} alternativeLabel connector={<ColorConnector />}>
                 {steps.map((step, i) => (
@@ -687,10 +684,10 @@ export default function KYC() {
         </Box>
 
         <Box sx={{ p: { xs: 3, sm: 6 } }}>
-            {error && <Alert severity="error" sx={{ mb: 4, borderRadius: 2 }}>{error}</Alert>}
+            {error && <Alert severity="error" sx={{ mb: 4, borderRadius: 0}}>{error}</Alert>}
         
             {user?.kyc_status === 'rejected' && user?.kyc_rejection_reason && (
-              <Alert severity="warning" sx={{ mb: 4, borderRadius: 3, fontWeight: 600, border: '1px solid #FFE082' }}>
+              <Alert severity="warning" sx={{ mb: 4, borderRadius: 0, fontWeight: 600, border: '1px solid #FFE082' }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Further Action Required</Typography>
                 Administrator feedback: {user.kyc_rejection_reason}
               </Alert>
@@ -704,7 +701,7 @@ export default function KYC() {
                 onClick={() => setActiveStep(s => s - 1)} 
                 disabled={activeStep === 0}
                 startIcon={<BackIcon />}
-                sx={{ borderRadius: 2.5, px: 3 }}
+                sx={{ borderRadius: 0, px: 3 }}
             >
                 Back
             </Button>
@@ -713,7 +710,7 @@ export default function KYC() {
                     variant="contained" 
                     onClick={handleSubmit} 
                     disabled={loading}
-                    sx={{ borderRadius: 2.5, px: 6, fontWeight: 700, height: 48 }}
+                    sx={{ borderRadius: 0, px: 6, fontWeight: 700, height: 48 }}
                 >
                     {loading ? <CircularProgress size={24} color="inherit" /> : 'Submit for Verification'}
                 </Button>
@@ -722,7 +719,7 @@ export default function KYC() {
                     variant="contained" 
                     onClick={handleNext}
                     endIcon={<NextIcon />}
-                    sx={{ borderRadius: 2.5, px: 6, fontWeight: 700, height: 48 }}
+                    sx={{ borderRadius: 0, px: 6, fontWeight: 700, height: 48 }}
                 >
                     Save & Continue
                 </Button>

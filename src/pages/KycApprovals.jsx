@@ -61,7 +61,7 @@ function PaymentConfigPreview({ orgId }) {
   if (!config) return <Alert severity="warning" sx={{ py: 0 }}>No payment configuration found for this organization.</Alert>
 
   return (
-    <Box sx={{ bgcolor: '#F8F9FA', p: 2, borderRadius: 2, border: '1px solid #E8EAED' }}>
+    <Box sx={{ bgcolor: '#F8F9FA', p: 2, borderRadius: 0, border: '1px solid #E8EAED' }}>
       <Grid container spacing={2}>
         <Grid item xs={12} sm={6}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -173,7 +173,7 @@ export default function KycApprovals() {
         <Tab label={<b>Individual Users</b>} />
       </Tabs>
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #E8EAED', borderRadius: 3 }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #E8EAED', borderRadius: 0}}>
         <Table>
           <TableHead sx={{ bgcolor: '#F8F9FA' }}>
             <TableRow>

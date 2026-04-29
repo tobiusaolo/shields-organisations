@@ -24,7 +24,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      // Handle specific error status codes
       if (error.response.status === 401) {
         localStorage.removeItem('token')
         window.location.href = '/login'
@@ -62,10 +61,13 @@ export const tenancyAPI = {
   approveKyc: (orgId) => api.post(`/tenancy/organizations/${orgId}/kyc/approve`),
   rejectKyc: (orgId, data) => api.post(`/tenancy/organizations/${orgId}/kyc/reject`, data),
   getUserContext: () => api.get('/tenancy/users/me/context'),
+  registerUser: (data) => api.post('/tenancy/users/register', data),
+  registerOrganization: (data) => api.post('/tenancy/organizations/register', data),
   login: (credentials) => api.post('/tenancy/users/login', credentials),
   submitUserKyc: (data) => api.post('/tenancy/users/me/kyc', data),
   approveUser: (userId) => api.post(`/tenancy/users/${userId}/approve`),
-  getGlobalUsers: () => api.get('/tenancy/users'),
+  getGlobalUsers: () => api.get("/tenancy/users"),
+  resetUserPassword: (userId, data) => api.put(`/tenancy/users/${userId}/password/reset`, data),
 
   // Client Management (Personal Portfolio)
   registerClient: (data, kycData) => api.post('/tenancy/clients', { ...data, kyc_data: kycData }),
@@ -120,6 +122,7 @@ export const policyAPI = {
   createPolicyQuestion: (policyId, data) => api.post(`/policies/${policyId}/questions`, data),
   getPolicyQuestions: (policyId) => api.get(`/policies/${policyId}/questions`),
   answerPolicyQuestion: (policyId, questionId, data) => api.post(`/policies/${policyId}/questions/${questionId}/answer`, data),
+  getOrganizationCustomerAccounts: (orgId) => api.get(`/policies/organizations/${orgId}/customer-accounts`),
 }
 
 export const claimAPI = {
@@ -161,7 +164,7 @@ export const operationalAPI = {
 }
 
 export const notificationAPI = {
-  createTemplate: (orgId, data) => api.post(`/notifications/organizations/${org_id}/templates`, data),
+  createTemplate: (orgId, data) => api.post(`/notifications/organizations/${orgId}/templates`, data),
   getTemplates: (orgId) => api.get(`/notifications/organizations/${orgId}/templates`),
   sendNotification: (orgId, data) => api.post(`/notifications/organizations/${orgId}/send`, data),
   getLogs: (orgId, recipientAccountId) => api.get(`/notifications/organizations/${orgId}/logs`, { params: { recipient_account_id: recipientAccountId } }),
@@ -197,6 +200,8 @@ export const policyDocumentAPI = {
 export const publicAPI = {
   getPublicProducts: () => api.get('/public/products'),
   getPublicProduct: (productId) => api.get(`/public/products/${productId}`),
+  getProductTemplates: (productId) => api.get(`/public/products/${productId}/templates`),
+  getTemplateFormsPublic: (productId, templateId) => api.get(`/public/products/${productId}/templates/${templateId}/forms`),
   createPublicQuotation: (data) => api.post('/public/quotations', data),
   checkPolicyStatus: (policyNumber) => api.get('/public/policies/status', { params: { policy_number: policyNumber } }),
   // Client Claims
@@ -206,6 +211,11 @@ export const publicAPI = {
   getClientPolicyDetails: (policyId) => api.get(`/public/policies/${policyId}/details`),
   // Public Reviews
   getProductReviews: (productId, approvedOnly = true) => api.get(`/public/products/${productId}/reviews`, { params: { approved_only: approvedOnly } }),
+  // PesaPal Payment Integration
+  getOrgPaymentConfig: (orgId) => api.get(`/payments/organizations/${orgId}/payment-config`),
+  initiatePesapalPayment: (orgId, policyId, params) => api.post(`/payments/organizations/${orgId}/pesapal/initiate/${policyId}`, null, { params }),
+  createPublicPolicy: (data) => api.post('/public/policies', data),
+  getPricingTiersPublic: (orgId, templateId) => api.get(`/public/organizations/${orgId}/pricing-tiers`, { params: { product_template_id: templateId } }),
 }
 
 export const promotionAPI = {

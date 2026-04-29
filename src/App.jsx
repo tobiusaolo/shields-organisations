@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ClientRegister from './pages/ClientRegister'
 import Dashboard from './pages/Dashboard'
 import Policies from './pages/Policies'
 import Claims from './pages/Claims'
@@ -17,13 +18,25 @@ import Promotions from './pages/Promotions'
 import PolicyLedger from './pages/PolicyLedger'
 import Clients from './pages/Clients'
 import Layout from './components/Layout'
-import { Box, CircularProgress } from '@mui/material'
+import ClientLayout from './components/ClientLayout'
+import LandingPage from './pages/LandingPage'
+import ClientDashboard from './pages/ClientDashboard'
+import ClientProducts from './pages/ClientProducts'
+import ClientProductDetails from './pages/ClientProductDetails'
+import ClientKYC from './pages/ClientKYC'
+import ClientPolicies from './pages/ClientPolicies'
+import ClientClaims from './pages/ClientClaims'
+import ClientSupport from './pages/ClientSupport'
+import PaymentCallback from './pages/PaymentCallback'
+import { Box, CircularProgress, Typography } from '@mui/material'
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes
     },
   },
 })
@@ -36,74 +49,100 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
+            
+            {/* Payment Callback (public - PesaPal redirects here) */}
+            <Route path="/client/payment/callback" element={<PaymentCallback />} />
+
+            {/* Auth Routes - Portals */}
+            <Route path="/client/login" element={<Login portal="client" />} />
+            <Route path="/client/register" element={<ClientRegister />} />
+            <Route path="/admin/login" element={<Login portal="admin" />} />
+            <Route path="/admin/register" element={<Register portal="admin" />} />
+            
+            {/* Legacy/Redirect Auth */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/" element={
-              <ProtectedRoute>
+
+            {/* Organization / Admin Portal */}
+            <Route path="/admin" element={
+              <ProtectedRoute allowedRoles={['platform_admin', 'organization_admin', 'underwriter', 'agent', 'claims_officer']}>
                 <Layout><Dashboard /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/policies" element={
+            <Route path="/admin/policies" element={
               <ProtectedRoute>
                 <Layout><Policies /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/policies/:id" element={
-              <ProtectedRoute>
-                <Layout><Policies /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/claims" element={
+            <Route path="/admin/claims" element={
               <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'claims_officer', 'underwriter', 'broker', 'read_only']}>
                 <Layout><Claims /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/commissions" element={
+            <Route path="/admin/commissions" element={
               <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'agent', 'broker', 'senior_agent', 'team_lead']}>
                 <Layout><Commissions /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/products" element={
+            <Route path="/admin/products" element={
               <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'underwriter']}>
                 <Layout><Products /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/profile" element={
+            <Route path="/admin/profile" element={
               <ProtectedRoute>
                 <Layout><Profile /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/settings" element={
+            <Route path="/admin/settings" element={
               <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'platform_admin']}>
                 <Layout><Settings /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/kyc" element={
+            <Route path="/admin/kyc" element={
               <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'platform_admin']}>
                 <Layout><KYC /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/team" element={
+            <Route path="/admin/team" element={
               <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'platform_admin']}>
                 <Layout><Team /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/clients" element={
+            <Route path="/admin/clients" element={
               <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'agent', 'broker', 'senior_agent', 'underwriter']}>
                 <Layout><Clients /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/promotions" element={
+            <Route path="/admin/promotions" element={
               <ProtectedRoute>
                 <Layout><Promotions /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/ledger" element={
+            <Route path="/admin/ledger" element={
               <ProtectedRoute allowedRoles={['admin', 'organization_admin']}>
                 <Layout><PolicyLedger /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+
+            <Route path="/client" element={
+              <ProtectedRoute>
+                <ClientLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<ClientDashboard />} />
+              <Route path="products" element={<ClientProducts />} />
+              <Route path="products/:id" element={<ClientProductDetails />} />
+              <Route path="policies" element={<ClientPolicies />} />
+              <Route path="claims" element={<ClientClaims />} />
+              <Route path="support" element={<ClientSupport />} />
+              <Route path="profile" element={<Box p={4}><Profile /></Box>} />
+              <Route path="kyc" element={<Box p={4}><ClientKYC /></Box>} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

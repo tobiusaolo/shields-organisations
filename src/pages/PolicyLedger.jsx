@@ -70,7 +70,7 @@ export default function PolicyLedger() {
           <Typography variant="h4" sx={{ fontWeight: 800, color: '#1A237E' }}>Policy Ledger</Typography>
           <Typography variant="body2" sx={{ color: '#546E7A' }}>Administrative oversight of organizational policy health and payments.</Typography>
         </Box>
-        <Button variant="contained" startIcon={<PaymentsIcon />} sx={{ borderRadius: 2, bgcolor: '#1A237E' }}>
+        <Button variant="contained" startIcon={<PaymentsIcon />} sx={{ borderRadius: 0, bgcolor: '#1A237E' }}>
           Payment Reports
         </Button>
       </Box>
@@ -83,7 +83,7 @@ export default function PolicyLedger() {
           { label: 'Unpaid/Draft', value: stats.pending, color: '#ED6C02' },
         ].map((item, idx) => (
           <Grid item xs={12} sm={6} md={3} key={idx}>
-            <Card sx={{ borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+            <Card sx={{ borderRadius: 0, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
               <CardContent sx={{ textAlign: 'center' }}>
                 <Typography variant="h3" sx={{ fontWeight: 900, color: item.color }}>{item.value}</Typography>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#90A4AE', textTransform: 'uppercase' }}>{item.label}</Typography>
@@ -93,7 +93,7 @@ export default function PolicyLedger() {
         ))}
       </Grid>
 
-      <TableContainer component={Paper} sx={{ borderRadius: 4, boxShadow: '0 4px 25px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+      <TableContainer component={Paper} sx={{ borderRadius: 0, boxShadow: '0 4px 25px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         <Table>
           <TableHead sx={{ bgcolor: '#F1F3F4' }}>
             <TableRow>
@@ -120,7 +120,7 @@ export default function PolicyLedger() {
                       label={status.label} 
                       color={status.color} 
                       icon={status.icon} 
-                      sx={{ fontWeight: 600, borderRadius: 1.5 }} 
+                      sx={{ fontWeight: 600, borderRadius: 0}} 
                     />
                   </TableCell>
                 </TableRow>

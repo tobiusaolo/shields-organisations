@@ -192,15 +192,15 @@ export default function Clients() {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setOpen(true)}
-          sx={{ borderRadius: 3, fontWeight: 700, px: 3, py: 1.2, boxShadow: '0 4px 12px rgba(26,115,232,0.3)' }}
+          sx={{ borderRadius: 0, fontWeight: 700, px: 3, py: 1.2, boxShadow: '0 4px 12px rgba(26,115,232,0.3)' }}
         >
           Register New Client
         </Button>
       </Box>
 
-      {success && <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>{success}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 3, borderRadius: 0}}>{success}</Alert>}
 
-      <Paper elevation={0} sx={{ border: '1px solid #E8EAED', borderRadius: 4, overflow: 'hidden', bgcolor: '#FFFFFF' }}>
+      <Paper elevation={0} sx={{ border: '1px solid #E8EAED', borderRadius: 0, overflow: 'hidden', bgcolor: '#FFFFFF' }}>
         <Box sx={{ p: 2.5, borderBottom: '1px solid #E8EAED', display: 'flex', alignItems: 'center', gap: 2 }}>
             <TextField
                 size="small"
@@ -214,7 +214,7 @@ export default function Clients() {
                             <SearchIcon sx={{ color: '#9AA0A6', fontSize: 20 }} />
                         </InputAdornment>
                     ),
-                    sx: { borderRadius: 3, bgcolor: '#F8F9FA' }
+                    sx: { borderRadius: 0, bgcolor: '#F8F9FA' }
                 }}
             />
         </Box>
@@ -322,7 +322,7 @@ export default function Clients() {
         open={open}
         onClose={() => setOpen(false)}
         PaperProps={{
-          sx: { width: 500, borderTopLeftRadius: 16, borderBottomLeftRadius: 16 }
+          sx: { width: 500, borderRadius: 0 }
         }}
       >
         <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -333,7 +333,7 @@ export default function Clients() {
             </Typography>
           </Box>
 
-          {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{error}</Alert>}
+          {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 0}}>{error}</Alert>}
 
           <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ mb: 3 }}>
             <Tab label="Basic Info" />
@@ -471,7 +471,7 @@ export default function Clients() {
                       <Box
                         sx={{
                           border: '2px dashed #E8EAED',
-                          borderRadius: 2,
+                          borderRadius: 0,
                           p: 2,
                           textAlign: 'center',
                           cursor: 'pointer',
@@ -504,7 +504,7 @@ export default function Clients() {
                       <Box
                         sx={{
                           border: '2px dashed #E8EAED',
-                          borderRadius: 2,
+                          borderRadius: 0,
                           p: 2,
                           textAlign: 'center',
                           cursor: 'pointer',
@@ -544,7 +544,7 @@ export default function Clients() {
                       <Box
                         sx={{
                           border: '2px dashed #E8EAED',
-                          borderRadius: 2,
+                          borderRadius: 0,
                           p: 2,
                           textAlign: 'center',
                           cursor: 'pointer',
@@ -577,7 +577,7 @@ export default function Clients() {
                       <Box
                         sx={{
                           border: '2px dashed #E8EAED',
-                          borderRadius: 2,
+                          borderRadius: 0,
                           p: 2,
                           textAlign: 'center',
                           cursor: 'pointer',
@@ -615,7 +615,7 @@ export default function Clients() {
                   <Box
                     sx={{
                       border: '2px dashed #E8EAED',
-                      borderRadius: 2,
+                      borderRadius: 0,
                       p: 2,
                       textAlign: 'center',
                       cursor: 'pointer',
@@ -646,7 +646,7 @@ export default function Clients() {
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Box sx={{ p: 2, bgcolor: '#F8F9FA', borderRadius: 2, border: '1px dashed #E8EAED' }}>
+                  <Box sx={{ p: 2, bgcolor: '#F8F9FA', borderRadius: 0, border: '1px dashed #E8EAED' }}>
                     <Typography sx={{ fontSize: '0.8rem', color: '#5F6368', display: 'flex', alignItems: 'center', gap: 1 }}>
                       <DocIcon sx={{ fontSize: 16, color: '#1A73E8' }} />
                       KYC data and documents will be stored in the user's profile for mobile app verification.
@@ -657,7 +657,7 @@ export default function Clients() {
               </Grid>
             )}
 
-            <Box sx={{ mt: 4, p: 2, bgcolor: '#F8F9FA', borderRadius: 3, border: '1px solid #E8EAED' }}>
+            <Box sx={{ mt: 4, p: 2, bgcolor: '#F8F9FA', borderRadius: 0, border: '1px solid #E8EAED' }}>
                <Typography sx={{ fontSize: '0.8rem', color: '#5F6368', display: 'flex', alignItems: 'center', gap: 1 }}>
                   <VerifiedIcon sx={{ fontSize: 16, color: '#1A73E8' }} />
                   This client will be attached only to you and your record. They will become a formal organization member only after their first policy purchase.
@@ -676,7 +676,7 @@ export default function Clients() {
               variant="contained"
               onClick={() => tabValue === 0 ? setTabValue(1) : handleRegister()}
               disabled={registerClientMutation.isLoading}
-              sx={{ borderRadius: 3, fontWeight: 700, px: 4 }}
+              sx={{ borderRadius: 0, fontWeight: 700, px: 4 }}
             >
               {tabValue === 0 ? 'Next: KYC Details' : (registerClientMutation.isLoading ? 'Registering...' : 'Register Client')}
             </Button>
@@ -689,7 +689,7 @@ export default function Clients() {
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
-        PaperProps={{ sx: { borderRadius: 3, minWidth: 200, mt: 1, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid #E8EAED' } }}
+        PaperProps={{ sx: { borderRadius: 0, minWidth: 200, mt: 1, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid #E8EAED' } }}
       >
         <MenuItem onClick={handleMenuClose} sx={{ py: 1.2, gap: 1.5, fontSize: '0.85rem' }}>
           <ResetIcon sx={{ fontSize: 18, color: '#5F6368' }} /> Reset Password

@@ -51,7 +51,7 @@ export default function Promotions() {
       </Box>
 
       {/* ── My Referral Code ── */}
-      <Paper sx={{ mb: 4, borderRadius: 4, overflow: 'hidden', border: '1px solid #E8EAED', display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
+      <Paper sx={{ mb: 4, borderRadius: 0, overflow: 'hidden', border: '1px solid #E8EAED', display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
         <Box sx={{ p: 4, bgcolor: '#F8F9FE', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
             <Avatar sx={{ bgcolor: 'rgba(26,115,232,0.1)', color: '#1A73E8', width: 48, height: 48 }}>
@@ -65,7 +65,7 @@ export default function Promotions() {
           <Box sx={{ mt: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
             {referralLoading ? <CircularProgress size={24} /> : (
               <>
-                <Paper elevation={0} sx={{ py: 1.5, px: 3, border: '2px dashed #1A73E8', borderRadius: 2, bgcolor: '#FFFFFF' }}>
+                <Paper elevation={0} sx={{ py: 1.5, px: 3, border: '2px dashed #1A73E8', borderRadius: 0, bgcolor: '#FFFFFF' }}>
                   <Typography sx={{ fontFamily: 'monospace', fontWeight: 900, fontSize: '1.2rem', color: '#1A73E8', letterSpacing: '0.1em' }}>
                     {referralCodeData?.code || '—'}
                   </Typography>
@@ -94,7 +94,7 @@ export default function Promotions() {
 
       {/* ── Active Coupons ── */}
       <Typography variant="h6" sx={{ fontWeight: 800, color: '#202124', mb: 2 }}>Available Coupons</Typography>
-      <Paper sx={{ borderRadius: 4, overflow: 'hidden', border: '1px solid #E8EAED' }}>
+      <Paper sx={{ borderRadius: 0, overflow: 'hidden', border: '1px solid #E8EAED' }}>
         {couponsLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>
         ) : (

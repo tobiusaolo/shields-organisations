@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
-import { policyAPI, promotionAPI } from '../services/api'
+import { policyAPI, promotionAPI, formAPI, productAPI } from '../services/api'
 import { formatCurrency } from '../utils/formatters'
 import {
   Box,
@@ -36,6 +36,15 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  Tabs,
+  Tab,
+  LinearProgress,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Stepper,
+  Step,
+  StepLabel,
 } from '@mui/material'
 import {
   Search as SearchIcon,
@@ -56,6 +65,11 @@ import {
   Fingerprint as NinIcon,
   Send as SendIcon,
   Close as CloseIcon,
+  ExpandMore as ExpandMoreIcon,
+  Person as PersonIcon,
+  Assignment as FormIcon2,
+  QuestionAnswer as QAIcon,
+  Payment as PaymentIcon,
 } from '@mui/icons-material'
 
 // Deleted POLICIES mock test payload
@@ -73,8 +87,8 @@ const AVATAR_COLORS = ['#1A73E8', '#1E8E3E', '#E37400', '#7B61FF', '#D93025']
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || { color: '#5F6368', bg: '#F1F3F4', dot: '#9AA0A6' }
   return (
-    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.6, px: 1.25, py: 0.4, borderRadius: 6, bgcolor: cfg.bg }}>
-      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: cfg.dot }} />
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.6, px: 1.25, py: 0.4, borderRadius: 0, bgcolor: cfg.bg }}>
+      <Box sx={{ width: 6, height: 6, borderRadius: 0, bgcolor: cfg.dot }} />
       <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: cfg.color, lineHeight: 1 }}>{status}</Typography>
     </Box>
   )
@@ -108,6 +122,7 @@ export default function Policies() {
   // Policy Details & Q&A State
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [selectedPolicy, setSelectedPolicy] = useState(null)
+  const [detailsTab, setDetailsTab] = useState(0)
   const [newQuestion, setNewQuestion] = useState('')
   const [answerInputs, setAnswerInputs] = useState({})
   const [uploadLoading, setUploadLoading] = useState(false)
@@ -233,6 +248,19 @@ export default function Policies() {
     },
   })
 
+
+  const { data: templateForms = [] } = useQuery({
+    queryKey: ['template-forms', selectedPolicy?.product_template_id],
+    queryFn: async () => {
+      if (!selectedPolicy?.product_template_id) return []
+      const res = await formAPI.getTemplateForms(user.organization_id, selectedPolicy.product_template_id)
+      return res.data || []
+    },
+    enabled: !!selectedPolicy?.product_template_id && detailsOpen
+  })
+
+
+
   const { data: customers } = useQuery({
     queryKey: ['customers', user?.organization_id],
     queryFn: () => policyAPI.getOrganizationCustomerAccounts(user.organization_id),
@@ -282,10 +310,10 @@ export default function Policies() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <Button variant="outlined" startIcon={<DownloadIcon />} sx={{ borderRadius: 2.5, fontWeight: 600, color: '#5F6368', borderColor: '#DADCE0' }}>
+          <Button variant="outlined" startIcon={<DownloadIcon />} sx={{ borderRadius: 0, fontWeight: 600, color: '#5F6368', borderColor: '#DADCE0' }}>
             Export
           </Button>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ borderRadius: 2.5, fontWeight: 700 }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ borderRadius: 0, fontWeight: 700 }}>
             New Policy
           </Button>
         </Box>
@@ -413,7 +441,7 @@ export default function Policies() {
                       <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                           <Box sx={{ 
-                            width: 28, height: 28, borderRadius: 1, 
+                            width: 28, height: 28, borderRadius: 0, 
                             bgcolor: '#F1F3F4', overflow: 'hidden',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             border: '1px solid #E8EAED'
@@ -455,7 +483,7 @@ export default function Policies() {
                               {p.total_installments || 1}
                             </Typography>
                           </Box>
-                          <Box sx={{ width: 60, height: 6, bgcolor: '#E8EAED', borderRadius: 3, overflow: 'hidden' }}>
+                          <Box sx={{ width: 60, height: 6, bgcolor: '#E8EAED', borderRadius: 0, overflow: 'hidden' }}>
                             <Box 
                               sx={{ 
                                 width: `${((p.installments_paid || 0) / (p.total_installments || 1)) * 100}%`, 
@@ -558,7 +586,7 @@ export default function Policies() {
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
         PaperProps={{
-          sx: { borderRadius: 2.5, border: '1px solid #E8EAED', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 180 },
+          sx: { borderRadius: 0, border: '1px solid #E8EAED', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 180 },
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
@@ -603,7 +631,7 @@ export default function Policies() {
           <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
-                <TextField select fullWidth label="Policyholder" value={newPolicy.policy_holder_id} onChange={e => setNewPolicy(n => ({...n, policy_holder_id: e.target.value}))} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}>
+                <TextField select fullWidth label="Policyholder" value={newPolicy.policy_holder_id} onChange={e => setNewPolicy(n => ({...n, policy_holder_id: e.target.value}))} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0} }}>
                   {(customers?.data || []).map(c => (
                     <MenuItem key={c.id} value={c.id}>{c.full_name} ({c.email})</MenuItem>
                   ))}
@@ -613,17 +641,17 @@ export default function Policies() {
                 <TextField select fullWidth label="Product Template" value={newPolicy.product_template_id} onChange={e => {
                   const t = (templates?.data?.items || []).find(item => item.id === e.target.value);
                   setNewPolicy(n => ({...n, product_template_id: e.target.value, premium: t?.base_premium || ''}));
-                }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}>
+                }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0} }}>
                   {(templates?.data?.items || []).map(t => (
                     <MenuItem key={t.id} value={t.id}>{t.name} (Code: {t.code || 'N/A'})</MenuItem>
                   ))}
                 </TextField>
               </Grid>
               <Grid item xs={12}>
-                <TextField fullWidth label="Premium" type="number" value={newPolicy.premium} onChange={e => { setNewPolicy(n => ({...n, premium: e.target.value})); setCouponRes(null); }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                <TextField fullWidth label="Premium" type="number" value={newPolicy.premium} onChange={e => { setNewPolicy(n => ({...n, premium: e.target.value})); setCouponRes(null); }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0} }} />
               </Grid>
               <Grid item xs={12}>
-                <TextField fullWidth label="Start Date" type="date" InputLabelProps={{ shrink: true }} value={newPolicy.start_date} onChange={e => setNewPolicy(n => ({...n, start_date: e.target.value}))} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                <TextField fullWidth label="Start Date" type="date" InputLabelProps={{ shrink: true }} value={newPolicy.start_date} onChange={e => setNewPolicy(n => ({...n, start_date: e.target.value}))} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0} }} />
               </Grid>
               
               {/* Coupon Field */}
@@ -631,13 +659,13 @@ export default function Policies() {
                 <Divider sx={{ my: 2 }} />
                 <Typography sx={{ mb: 1.5, fontWeight: 700, fontSize: '0.85rem', color: '#202124' }}>Redeem Promotional Coupon</Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                  <TextField fullWidth size="small" placeholder="Enter coupon code" value={couponCode} onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponRes(null); }} disabled={!newPolicy.premium} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                  <Button variant="outlined" onClick={validateCoupon} disabled={!couponCode || !newPolicy.premium || validatingCoupon} sx={{ borderRadius: 2, fontWeight: 700 }}>
+                  <TextField fullWidth size="small" placeholder="Enter coupon code" value={couponCode} onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponRes(null); }} disabled={!newPolicy.premium} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0} }} />
+                  <Button variant="outlined" onClick={validateCoupon} disabled={!couponCode || !newPolicy.premium || validatingCoupon} sx={{ borderRadius: 0, fontWeight: 700 }}>
                     {validatingCoupon ? <Spinner size={20} /> : 'Apply'}
                   </Button>
                 </Box>
                 {couponRes && (
-                  <Box sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: couponRes.valid ? '#E6F4EA' : '#FCE8E6', color: couponRes.valid ? '#1E8E3E' : '#D93025', border: `1px solid ${couponRes.valid ? '#34A853' : '#EA4335'}` }}>
+                  <Box sx={{ mt: 2, p: 2, borderRadius: 0, bgcolor: couponRes.valid ? '#E6F4EA' : '#FCE8E6', color: couponRes.valid ? '#1E8E3E' : '#D93025', border: `1px solid ${couponRes.valid ? '#34A853' : '#EA4335'}` }}>
                     <Typography sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{couponRes.message}</Typography>
                     {couponRes.valid && (
                       <Typography sx={{ fontSize: '0.8rem', mt: 0.5, color: '#5F6368', fontWeight: 500 }}>
@@ -652,8 +680,8 @@ export default function Policies() {
 
           {/* Drawer Footer */}
           <Box sx={{ p: 3, borderTop: '1px solid #E8EAED', display: 'flex', gap: 2 }}>
-            <Button fullWidth variant="outlined" onClick={() => setCreateOpen(false)} sx={{ borderRadius: 2, py: 1.25, fontWeight: 600 }}>Cancel</Button>
-            <Button fullWidth variant="contained" onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !newPolicy.premium || !newPolicy.policy_holder_id} sx={{ borderRadius: 2, py: 1.25, fontWeight: 700 }}>
+            <Button fullWidth variant="outlined" onClick={() => setCreateOpen(false)} sx={{ borderRadius: 0, py: 1.25, fontWeight: 600 }}>Cancel</Button>
+            <Button fullWidth variant="contained" onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !newPolicy.premium || !newPolicy.policy_holder_id} sx={{ borderRadius: 0, py: 1.25, fontWeight: 700 }}>
               {createMutation.isPending ? <Spinner size={20} color="inherit" /> : 'Issue Policy'}
             </Button>
           </Box>
@@ -690,7 +718,7 @@ export default function Policies() {
               
               {/* 0. PLATFORM VERIFIED IDENTITY */}
               {selectedPolicyForDocs?.holder_info && (
-                <Box sx={{ p: 2.5, borderRadius: 3, bgcolor: '#F1F3F4', border: '1px solid #DADCE0' }}>
+                <Box sx={{ p: 2.5, borderRadius: 0, bgcolor: '#F1F3F4', border: '1px solid #DADCE0' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     <VerifiedIcon sx={{ color: '#34A853', fontSize: 20 }} />
                     <Typography variant="subtitle2" sx={{ fontWeight: 900, color: '#202124' }}>
@@ -711,7 +739,7 @@ export default function Policies() {
                         label={selectedPolicyForDocs.holder_info.kyc_status?.toUpperCase()} 
                         size="small" 
                         color={selectedPolicyForDocs.holder_info.kyc_status === 'approved' ? 'success' : 'warning'}
-                        sx={{ height: 22, fontSize: '0.7rem', fontWeight: 800, borderRadius: 1.5 }}
+                        sx={{ height: 22, fontSize: '0.7rem', fontWeight: 800, borderRadius: 0}}
                       />
                     </Grid>
                     <Grid item xs={6}>
@@ -734,7 +762,7 @@ export default function Policies() {
                             key={idx}
                             size="small" 
                             variant="outlined" 
-                            sx={{ fontSize: '0.65rem', py: 0.25, borderRadius: 1.5, textTransform: 'none', fontWeight: 600 }}
+                            sx={{ fontSize: '0.65rem', py: 0.25, borderRadius: 0, textTransform: 'none', fontWeight: 600 }}
                           >
                             View {doc.document_type?.replace(/_/g, ' ')}
                           </Button>
@@ -746,23 +774,23 @@ export default function Policies() {
               )}
               
               {/* 1. DOWNLOAD SECTION */}
-              <Box sx={{ p: 2.5, borderRadius: 3, border: '1px solid #E8EAED', bgcolor: '#FDFDFD' }}>
+              <Box sx={{ p: 2.5, borderRadius: 0, border: '1px solid #E8EAED', bgcolor: '#FDFDFD' }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>1. Download Registration Artifacts</Typography>
                 <Typography variant="body2" sx={{ color: '#5F6368', mb: 2.5, lineHeight: 1.5 }}>
                   Download the official product blueprints and registration forms. Sign them manually and scan for upload.
                 </Typography>
-                <Button variant="outlined" startIcon={<DownloadIcon />} fullWidth sx={{ borderRadius: 2, py: 1, fontWeight: 700 }}>
+                <Button variant="outlined" startIcon={<DownloadIcon />} fullWidth sx={{ borderRadius: 0, py: 1, fontWeight: 700 }}>
                   Download All Required Forms (.zip)
                 </Button>
               </Box>
 
               {/* 2. UPLOAD SECTION */}
-              <Box sx={{ p: 2.5, borderRadius: 3, border: '1px solid #E8EAED' }}>
+              <Box sx={{ p: 2.5, borderRadius: 0, border: '1px solid #E8EAED' }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>2. Upload Signed & Scanned Proof</Typography>
                 <Typography variant="body2" sx={{ color: '#5F6368', mb: 2.5, lineHeight: 1.5 }}>
                   Submit the digital scan of your manual endorsement.
                 </Typography>
-                <Button variant="contained" component="label" startIcon={<UploadIcon />} fullWidth sx={{ borderRadius: 2, py: 1.25, fontWeight: 700 }}>
+                <Button variant="contained" component="label" startIcon={<UploadIcon />} fullWidth sx={{ borderRadius: 0, py: 1.25, fontWeight: 700 }}>
                   {uploadMutation.isPending ? <Spinner size={20} color="inherit" /> : 'Upload Signed PDF'}
                   <input type="file" hidden accept="application/pdf" onChange={(e) => {
                     const file = e.target.files[0]
@@ -782,7 +810,7 @@ export default function Policies() {
 
               {/* 3. STAFF APPROVAL SECTION */}
               {(selectedPolicyForDocs?.status === 'documentation_review' || selectedPolicyForDocs?.status === 'pending') && (
-                <Box sx={{ p: 2.5, borderRadius: 3, bgcolor: '#E8F0FE', border: '1px solid #1A73E8' }}>
+                <Box sx={{ p: 2.5, borderRadius: 0, bgcolor: '#E8F0FE', border: '1px solid #1A73E8' }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 900, color: '#1A73E8', mb: 1.5 }}>
                     3. Underwriter Final Review
                   </Typography>
@@ -794,7 +822,7 @@ export default function Policies() {
                     color="success" 
                     fullWidth 
                     onClick={() => approveDocsMutation.mutate(selectedPolicyForDocs.id)}
-                    sx={{ borderRadius: 2, py: 1.25, fontWeight: 800, boxShadow: '0 4px 12px rgba(52,168,83,0.2)' }}
+                    sx={{ borderRadius: 0, py: 1.25, fontWeight: 800, boxShadow: '0 4px 12px rgba(52,168,83,0.2)' }}
                     disabled={approveDocsMutation.isPending}
                   >
                     {approveDocsMutation.isPending ? <Spinner size={24} color="inherit" /> : 'Approve & Unlock Payment'}
@@ -803,7 +831,7 @@ export default function Policies() {
               )}
 
               {selectedPolicyForDocs?.status === 'docs_approved' && (
-                <Alert severity="success" variant="filled" sx={{ borderRadius: 3, fontWeight: 700 }}>
+                <Alert severity="success" variant="filled" sx={{ borderRadius: 0, fontWeight: 700 }}>
                   Compliance satisfied! Payment gateway active.
                 </Alert>
               )}
@@ -812,184 +840,356 @@ export default function Policies() {
 
           {/* Drawer Footer */}
           <Box sx={{ p: 3, bgcolor: '#F8F9FA', borderTop: '1px solid #E8EAED', display: 'flex', justifyContent: 'flex-end' }}>
-            <Button variant="outlined" onClick={() => setDocModalOpen(false)} sx={{ borderRadius: 2, fontWeight: 700, px: 4 }}>Close Panel</Button>
+            <Button variant="outlined" onClick={() => setDocModalOpen(false)} sx={{ borderRadius: 0, fontWeight: 700, px: 4 }}>Close Panel</Button>
           </Box>
         </Box>
       </Drawer>
 
-      {/* Policy Details & Q&A Drawer */}
+      {/* Policy Details Drawer - Tabbed */}
       <Drawer
         anchor="right"
         open={detailsOpen}
-        onClose={() => setDetailsOpen(false)}
-        PaperProps={{
-          sx: { width: { xs: '100%', sm: 600 }, border: 'none', boxShadow: '-8px 0 32px rgba(0,0,0,0.1)' }
-        }}
+        onClose={() => { setDetailsOpen(false); setDetailsTab(0); }}
+        PaperProps={{ sx: { width: { xs: '100%', sm: 680 }, border: 'none', boxShadow: '-12px 0 40px rgba(0,0,0,0.12)' } }}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          {/* Drawer Header */}
-          <Box sx={{ bgcolor: '#F8F9FA', p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E8EAED' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box sx={{ bgcolor: '#1A73E8', color: 'white', p: 1, borderRadius: 1.5, display: 'flex' }}>
-                <PolicyIcon />
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#F8F9FE' }}>
+
+          {/* Header */}
+          <Box sx={{ background: 'linear-gradient(135deg, #1A237E 0%, #283593 100%)', p: 3, color: '#fff' }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ bgcolor: 'rgba(255,255,255,0.15)', p: 1.5, borderRadius: 0, display: 'flex' }}>
+                  <PolicyIcon sx={{ fontSize: 24 }} />
+                </Box>
+                <Box>
+                  <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', letterSpacing: 0.5 }}>
+                    {selectedPolicy?.policy_number}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                    <Typography sx={{ fontSize: '0.78rem', opacity: 0.7 }}>
+                      {selectedPolicy?.product_info?.name || 'Insurance Policy'}
+                    </Typography>
+                    <Box sx={{ width: 4, height: 4, borderRadius: 0, bgcolor: 'rgba(255,255,255,0.5)' }} />
+                    <Typography sx={{ fontSize: '0.78rem', opacity: 0.7 }}>
+                      {selectedPolicy?.sales_channel?.replace(/_/g, ' ')}
+                    </Typography>
+                  </Box>
+                </Box>
               </Box>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 800 }}>{selectedPolicy?.policy_number}</Typography>
-                <Typography variant="body2" sx={{ color: '#5F6368' }}>Policy Details & Expert Q&A</Typography>
+              <IconButton onClick={() => { setDetailsOpen(false); setDetailsTab(0); }} sx={{ color: 'rgba(255,255,255,0.7)', mt: -0.5 }}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+
+            {/* Quick stats row */}
+            <Box sx={{ display: 'flex', gap: 3, mt: 3 }}>
+              {[
+                { label: 'Premium', value: formatCurrency(selectedPolicy?.premium, selectedPolicy?.currency) },
+                { label: 'Start', value: selectedPolicy?.start_date || 'N/A' },
+                { label: 'End', value: selectedPolicy?.end_date || 'N/A' },
+              ].map((s, i) => (
+                <Box key={i}>
+                  <Typography sx={{ fontSize: '0.68rem', opacity: 0.6, fontWeight: 700, textTransform: 'uppercase', mb: 0.3 }}>{s.label}</Typography>
+                  <Typography sx={{ fontWeight: 800, fontSize: '0.88rem' }}>{s.value}</Typography>
+                </Box>
+              ))}
+              <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center' }}>
+                <StatusBadge status={selectedPolicy?.status ? selectedPolicy.status.charAt(0).toUpperCase() + selectedPolicy.status.slice(1) : 'Unknown'} />
               </Box>
             </Box>
-            <IconButton onClick={() => setDetailsOpen(false)} size="small">
-              <CloseIcon />
-            </IconButton>
           </Box>
 
-          {/* Drawer Content */}
-          <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
-            <Box sx={{ mb: 4, p: 2, borderRadius: 3, border: '1px solid #E8EAED', bgcolor: '#FDFDFD' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2, color: '#202124', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Policy Snapshot</Typography>
-              <Grid container spacing={3}>
-                <Grid item xs={6}>
-                  <Typography variant="caption" sx={{ color: '#9AA0A6', fontWeight: 700, textTransform: 'uppercase', display: 'block', mb: 0.5 }}>Current Status</Typography>
-                  <StatusBadge status={selectedPolicy?.status ? selectedPolicy.status.charAt(0).toUpperCase() + selectedPolicy.status.slice(1) : 'Unknown'} />
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" sx={{ color: '#9AA0A6', fontWeight: 700, textTransform: 'uppercase', display: 'block', mb: 0.5 }}>Total Premium</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 900, color: '#1E8E3E' }}>{formatCurrency(selectedPolicy?.premium, selectedPolicy?.currency)}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" sx={{ color: '#9AA0A6', fontWeight: 700, textTransform: 'uppercase', display: 'block', mb: 0.5 }}>Effective From</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{selectedPolicy?.start_date || 'N/A'}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" sx={{ color: '#9AA0A6', fontWeight: 700, textTransform: 'uppercase', display: 'block', mb: 0.5 }}>Termination Date</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{selectedPolicy?.end_date || 'N/A'}</Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Divider sx={{ my: 1, borderStyle: 'dashed' }} />
-                  <Typography variant="caption" sx={{ color: '#9AA0A6', fontWeight: 700, textTransform: 'uppercase', display: 'block', mb: 1 }}>Product Engineering</Typography>
-                  <Box sx={{ p: 1.5, bgcolor: '#F1F3F4', borderRadius: 2 }}>
-                    <Typography sx={{ fontSize: '0.8rem', fontWeight: 800, mb: 0.5 }}>{selectedPolicy?.product_info?.name}</Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#5F6368' }}>
-                      <b>Template:</b> {selectedPolicy?.template_info?.name || 'Not Defined'}
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#5F6368' }}>
-                      <b>Calc Model:</b> {selectedPolicy?.template_info?.calculation_template || 'Dynamic Pricing'}
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-            </Box>
+          {/* Tabs */}
+          <Box sx={{ bgcolor: '#fff', borderBottom: '1px solid #E8EAED' }}>
+            <Tabs value={detailsTab} onChange={(_, v) => setDetailsTab(v)} sx={{ '& .MuiTab-root': { fontWeight: 700, fontSize: '0.82rem', minHeight: 48, textTransform: 'none' } }}>
+              <Tab icon={<PersonIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Overview" />
+              <Tab icon={<FormIcon2 sx={{ fontSize: 16 }} />} iconPosition="start" label={`Forms (${templateForms.length})`} />
+              <Tab icon={<QAIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Q&A" />
+            </Tabs>
+          </Box>
 
-            <Divider sx={{ my: 4 }} />
+          {/* Content */}
+          <Box sx={{ flex: 1, overflowY: 'auto' }}>
 
-            <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <ViewIcon sx={{ color: '#1A73E8' }} />
-              Policy Support & Discussion
-            </Typography>
+            {/* TAB 0: OVERVIEW */}
+            {detailsTab === 0 && (
+              <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
 
-            <Box sx={{ mb: 4, p: 2, bgcolor: '#F8F9FA', borderRadius: 3, border: '1px solid #E8EAED' }}>
-              <TextField
-                fullWidth
-                multiline
-                rows={2}
-                placeholder="Ask clarifying questions regarding this specific policy holder or coverage..."
-                value={newQuestion}
-                onChange={(e) => setNewQuestion(e.target.value)}
-                disabled={createQuestionMutation.isPending}
-                sx={{ bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-              />
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
-                <Button
-                  variant="contained"
-                  onClick={() => createQuestionMutation.mutate(newQuestion)}
-                  disabled={!newQuestion.trim() || createQuestionMutation.isPending}
-                  startIcon={createQuestionMutation.isPending ? <Spinner size={16} color="inherit" /> : <SendIcon />}
-                  sx={{ borderRadius: 2, px: 3, fontWeight: 700 }}
-                >
-                  Post Question
-                </Button>
-              </Box>
-            </Box>
-
-            {questionsLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-                <Spinner size={32} />
-              </Box>
-            ) : (
-              <List sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {(questions || []).length === 0 && (
-                  <Alert severity="info" variant="outlined" sx={{ borderRadius: 3, borderStyle: 'dashed' }}>
-                    No expert discussions found for this policy ledger yet.
-                  </Alert>
-                )}
-                {questions?.map((q) => (
-                  <Box key={q.id}>
-                    <ListItem disablePadding sx={{ alignItems: 'flex-start' }}>
-                      <ListItemIcon sx={{ minWidth: 44 }}>
-                        <Avatar sx={{ width: 32, height: 32, bgcolor: '#E8F0FE', color: '#1A73E8', fontWeight: 800, fontSize: '0.8rem' }}>
-                          {q.user_name?.charAt(0) || 'U'}
+                {/* Policyholder */}
+                {selectedPolicy?.holder_info && (
+                  <Box sx={{ bgcolor: '#fff', borderRadius: 0, border: '1px solid #E8EAED', overflow: 'hidden' }}>
+                    <Box sx={{ px: 2.5, py: 1.5, bgcolor: '#F8F9FE', borderBottom: '1px solid #E8EAED' }}>
+                      <Typography sx={{ fontWeight: 800, fontSize: '0.78rem', color: '#1A237E', textTransform: 'uppercase', letterSpacing: 0.8 }}>Policyholder</Typography>
+                    </Box>
+                    <Box sx={{ p: 2.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                        <Avatar sx={{ width: 52, height: 52, bgcolor: '#E8F0FE', color: '#1A73E8', fontWeight: 800, fontSize: '1.2rem' }}>
+                          {selectedPolicy.holder_info.first_name?.[0]?.toUpperCase()}
                         </Avatar>
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 800 }}>{q.user_name || 'System User'}</Typography>
-                            <Typography variant="caption" sx={{ color: '#9AA0A6' }}>{new Date(q.created_at).toLocaleDateString()}</Typography>
-                          </Box>
-                        }
-                        secondary={<Typography variant="body2" sx={{ color: '#202124', lineHeight: 1.5 }}>{q.question}</Typography>}
-                      />
-                    </ListItem>
-
-                    {q.answer && (
-                      <Box sx={{ ml: 5.5, mt: 2, p: 2, bgcolor: '#E6F4EA', borderRadius: 2, borderLeft: '4px solid #34A853' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                          <Avatar sx={{ width: 24, height: 24, bgcolor: '#1A73E8', color: 'white', fontSize: '0.7rem' }}>
-                            {q.answered_by_name?.charAt(0) || 'A'}
-                          </Avatar>
-                          <Typography variant="body2" sx={{ fontWeight: 900, color: '#137333' }}>
-                            {q.answered_by_name} <Typography component="span" sx={{ fontSize: '0.7rem', fontWeight: 400 }}>({q.answered_by_role})</Typography>
+                        <Box>
+                          <Typography sx={{ fontWeight: 800, fontSize: '1rem' }}>
+                            {selectedPolicy.holder_info.first_name} {selectedPolicy.holder_info.last_name}
                           </Typography>
+                          <Typography sx={{ fontSize: '0.8rem', color: '#5F6368' }}>{selectedPolicy.holder_info.email}</Typography>
                         </Box>
-                        <Typography variant="body2" sx={{ color: '#137333', lineHeight: 1.5 }}>{q.answer}</Typography>
+                        <Chip label={selectedPolicy.holder_info.kyc_status?.toUpperCase() || 'N/A'}
+                          size="small" color={selectedPolicy.holder_info.kyc_status === 'approved' ? 'success' : 'warning'}
+                          sx={{ ml: 'auto', fontWeight: 800, borderRadius: 0, height: 22, fontSize: '0.68rem' }} />
                       </Box>
-                    )}
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Typography sx={{ fontSize: '0.68rem', color: '#9AA0A6', fontWeight: 700, textTransform: 'uppercase', mb: 0.3 }}>NIN</Typography>
+                          <Typography sx={{ fontWeight: 700, fontFamily: 'monospace', fontSize: '0.88rem' }}>
+                            {selectedPolicy.holder_info.kyc_details?.nin || 'Not Provided'}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography sx={{ fontSize: '0.68rem', color: '#9AA0A6', fontWeight: 700, textTransform: 'uppercase', mb: 0.3 }}>Phone</Typography>
+                          <Typography sx={{ fontWeight: 700, fontSize: '0.88rem' }}>
+                            {selectedPolicy.holder_info.phone || 'N/A'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  </Box>
+                )}
 
-                    {!q.answer && (user?.role === 'organization_admin' || user?.role === 'underwriter' || user?.role === 'agent') && (
-                      <Box sx={{ ml: 5.5, mt: 2 }}>
-                        <TextField
-                          fullWidth
-                          multiline
-                          rows={2}
-                          size="small"
-                          placeholder="Type official response..."
-                          value={answerInputs[q.id] || ''}
-                          onChange={(e) => setAnswerInputs(prev => ({ ...prev, [q.id]: e.target.value }))}
-                          disabled={answerQuestionMutation.isPending}
-                          sx={{ bgcolor: '#F8F9FA', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                        />
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            onClick={() => answerQuestionMutation.mutate({ questionId: q.id, answer: answerInputs[q.id] })}
-                            disabled={!answerInputs[q.id]?.trim() || answerQuestionMutation.isPending}
-                            sx={{ borderRadius: 1.5, fontWeight: 700 }}
-                          >
-                            {answerQuestionMutation.isPending ? 'Saving...' : 'Submit Answer'}
-                          </Button>
-                        </Box>
-                      </Box>
+                {/* Policy Details */}
+                <Box sx={{ bgcolor: '#fff', borderRadius: 0, border: '1px solid #E8EAED', overflow: 'hidden' }}>
+                  <Box sx={{ px: 2.5, py: 1.5, bgcolor: '#F8F9FE', borderBottom: '1px solid #E8EAED' }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: '0.78rem', color: '#1A237E', textTransform: 'uppercase', letterSpacing: 0.8 }}>Policy Details</Typography>
+                  </Box>
+                  <Box sx={{ p: 2.5 }}>
+                    <Grid container spacing={2}>
+                      {[
+                        { label: 'Policy Number', value: selectedPolicy?.policy_number, mono: true },
+                        { label: 'Sales Channel', value: selectedPolicy?.sales_channel?.replace(/_/g, ' ') },
+                        { label: 'Product', value: selectedPolicy?.product_info?.name || 'N/A' },
+                        { label: 'Template', value: selectedPolicy?.template_info?.name || 'Standard' },
+                        { label: 'Effective From', value: selectedPolicy?.start_date || 'N/A' },
+                        { label: 'Termination', value: selectedPolicy?.end_date || 'N/A' },
+                      ].map((item, i) => (
+                        <Grid item xs={6} key={i}>
+                          <Typography sx={{ fontSize: '0.68rem', color: '#9AA0A6', fontWeight: 700, textTransform: 'uppercase', mb: 0.3 }}>{item.label}</Typography>
+                          <Typography sx={{ fontWeight: 700, fontSize: '0.88rem', fontFamily: item.mono ? 'monospace' : 'inherit' }}>{item.value}</Typography>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
+                </Box>
+
+                {/* Payment Progress */}
+                <Box sx={{ bgcolor: '#fff', borderRadius: 0, border: '1px solid #E8EAED', overflow: 'hidden' }}>
+                  <Box sx={{ px: 2.5, py: 1.5, bgcolor: '#F8F9FE', borderBottom: '1px solid #E8EAED' }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: '0.78rem', color: '#1A237E', textTransform: 'uppercase', letterSpacing: 0.8 }}>Payment Progress</Typography>
+                  </Box>
+                  <Box sx={{ p: 2.5 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>
+                        {selectedPolicy?.installments_paid || 0} of {selectedPolicy?.total_installments || 1} installments paid
+                      </Typography>
+                      <Typography sx={{ fontWeight: 800, color: '#1A73E8', fontSize: '0.85rem' }}>
+                        {Math.round(((selectedPolicy?.installments_paid || 0) / (selectedPolicy?.total_installments || 1)) * 100)}%
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={((selectedPolicy?.installments_paid || 0) / (selectedPolicy?.total_installments || 1)) * 100}
+                      sx={{ height: 8, borderRadius: 0, bgcolor: '#E8EAED', '& .MuiLinearProgress-bar': { borderRadius: 0, bgcolor: '#1A73E8' } }}
+                    />
+                    {selectedPolicy?.next_payment_date && (
+                      <Typography sx={{ fontSize: '0.75rem', color: '#5F6368', mt: 1 }}>
+                        Next payment: <b>{new Date(selectedPolicy.next_payment_date).toLocaleDateString('en-GB', { dateStyle: 'long' })}</b>
+                      </Typography>
                     )}
                   </Box>
-                ))}
-              </List>
+                </Box>
+              </Box>
+            )}
+
+            {/* TAB 1: COMPLIANCE FORMS */}
+            {detailsTab === 1 && (
+              <Box sx={{ p: 3 }}>
+                {templateForms.length === 0 ? (
+                  <Alert severity="info" sx={{ borderRadius: 0}}>No compliance forms are linked to this policy's product template.</Alert>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {templateForms.map((form, fi) => (
+                      <Accordion key={form.id || fi} defaultExpanded={fi === 0} sx={{ borderRadius: 0, border: '1px solid #E8EAED', boxShadow: 'none', '&:before': { display: 'none' } }}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#F8F9FE', borderRadius: 0, px: 2.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                            <FormIcon2 sx={{ fontSize: 18, color: '#1A73E8' }} />
+                            <Typography sx={{ fontWeight: 800, fontSize: '0.88rem' }}>{form.name}</Typography>
+                            {form.is_required && <Chip label="Required" size="small" color="error" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, borderRadius: 0}} />}
+                            <Chip label={`${(form.fields || []).length} fields`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, borderRadius: 0, ml: 'auto', bgcolor: '#E8F0FE', color: '#1A73E8' }} />
+                          </Box>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ p: 2.5, bgcolor: '#fff' }}>
+                          {form.description && (
+                            <Typography sx={{ fontSize: '0.8rem', color: '#5F6368', mb: 2, pb: 2, borderBottom: '1px dashed #E8EAED' }}>{form.description}</Typography>
+                          )}
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {(form.fields || []).map((field, fli) => {
+                              if (field.field_type === 'section') return (
+                                <Typography key={fli} sx={{ fontWeight: 900, fontSize: '0.78rem', color: '#1A237E', textTransform: 'uppercase', letterSpacing: 0.8, mt: 1, pt: 1, borderTop: '1px solid #E8EAED' }}>{field.label}</Typography>
+                              )
+                              if (field.field_type === 'table') return (
+                                <Box key={fli}>
+                                  <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', mb: 1, color: '#202124' }}>{field.label}</Typography>
+                                  <Box sx={{ overflow: 'auto', borderRadius: 0, border: '1px solid #E8EAED' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                                      <thead>
+                                        <tr style={{ background: '#F8F9FE' }}>
+                                          {(field.columns || []).map((col, ci) => (
+                                            <th key={ci} style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'left', borderBottom: '1px solid #E8EAED', color: '#5F6368' }}>{col.label}</th>
+                                          ))}
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {(field.prefill_rows || []).map((row, ri) => (
+                                          <tr key={ri} style={{ borderBottom: '1px solid #F1F3F4' }}>
+                                            {(field.columns || []).map((col, ci) => (
+                                              <td key={ci} style={{ padding: '8px 12px' }}>{row[col.key] || <span style={{ color: '#BDC1C6' }}>—</span>}</td>
+                                            ))}
+                                          </tr>
+                                        ))}
+                                        {(field.prefill_rows || []).length === 0 && Array.from({ length: field.min_rows || 1 }).map((_, ri) => (
+                                          <tr key={ri}>
+                                            {(field.columns || []).map((col, ci) => (
+                                              <td key={ci} style={{ padding: '8px 12px', color: '#BDC1C6', fontStyle: 'italic' }}>Enter {col.label}...</td>
+                                            ))}
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </Box>
+                                </Box>
+                              )
+                              if (field.field_type === 'checkbox') return (
+                                <Box key={fli} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #F1F3F4' }}>
+                                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 600 }}>{field.label}</Typography>
+                                  <Chip label={field.is_required ? 'Required' : 'Optional'} size="small" sx={{ height: 18, fontSize: '0.65rem' }} color={field.is_required ? 'warning' : 'default'} />
+                                </Box>
+                              )
+                              return (
+                                <Box key={fli} sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #F1F3F4' }}>
+                                  <Box>
+                                    <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#202124' }}>{field.label}</Typography>
+                                    {field.help_text && <Typography sx={{ fontSize: '0.72rem', color: '#9AA0A6', mt: 0.3 }}>{field.help_text}</Typography>}
+                                  </Box>
+                                  <Box sx={{ display: 'flex', gap: 0.8, flexShrink: 0, ml: 2 }}>
+                                    <Chip label={field.field_type} size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, bgcolor: '#F1F3F4', color: '#5F6368' }} />
+                                    {field.is_required && <Chip label="Required" size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }} />}
+                                  </Box>
+                                </Box>
+                              )
+                            })}
+                          </Box>
+                        </AccordionDetails>
+                      </Accordion>
+                    ))}
+                  </Box>
+                )}
+              </Box>
+            )}
+
+            {/* TAB 2: Q&A */}
+            {detailsTab === 2 && (
+              <Box sx={{ p: 3 }}>
+                <Box sx={{ mb: 3, p: 2.5, bgcolor: '#fff', borderRadius: 0, border: '1px solid #E8EAED' }}>
+                  <TextField
+                    fullWidth multiline rows={2}
+                    placeholder="Ask clarifying questions about this policy..."
+                    value={newQuestion}
+                    onChange={(e) => setNewQuestion(e.target.value)}
+                    disabled={createQuestionMutation.isPending}
+                    sx={{ bgcolor: '#F8F9FE', '& .MuiOutlinedInput-root': { borderRadius: 0} }}
+                  />
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
+                    <Button variant="contained" onClick={() => createQuestionMutation.mutate(newQuestion)}
+                      disabled={!newQuestion.trim() || createQuestionMutation.isPending}
+                      startIcon={createQuestionMutation.isPending ? <Spinner size={16} color="inherit" /> : <SendIcon />}
+                      sx={{ borderRadius: 0, px: 3, fontWeight: 700 }}>
+                      Post Question
+                    </Button>
+                  </Box>
+                </Box>
+
+                {questionsLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><Spinner size={32} /></Box>
+                ) : (
+                  <List sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, p: 0 }}>
+                    {(questions || []).length === 0 && (
+                      <Alert severity="info" variant="outlined" sx={{ borderRadius: 0, borderStyle: 'dashed' }}>
+                        No expert discussions found for this policy yet.
+                      </Alert>
+                    )}
+                    {(questions || []).map((q) => (
+                      <Box key={q.id} sx={{ bgcolor: '#fff', borderRadius: 0, border: '1px solid #E8EAED', p: 2.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                          <Avatar sx={{ width: 30, height: 30, bgcolor: '#E8F0FE', color: '#1A73E8', fontWeight: 800, fontSize: '0.78rem' }}>
+                            {q.user_name?.charAt(0) || 'U'}
+                          </Avatar>
+                          <Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>{q.user_name || 'System User'}</Typography>
+                          <Typography sx={{ fontSize: '0.72rem', color: '#9AA0A6', ml: 'auto' }}>{new Date(q.created_at).toLocaleDateString()}</Typography>
+                        </Box>
+                        <Typography sx={{ fontSize: '0.85rem', color: '#202124', lineHeight: 1.5, mb: 1.5, pl: 5 }}>{q.question}</Typography>
+
+                        {q.answer && (
+                          <Box sx={{ ml: 5, p: 2, bgcolor: '#E6F4EA', borderRadius: 0, borderLeft: '4px solid #34A853' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.8 }}>
+                              <Avatar sx={{ width: 22, height: 22, bgcolor: '#1A73E8', color: 'white', fontSize: '0.65rem' }}>
+                                {q.answered_by_name?.charAt(0) || 'A'}
+                              </Avatar>
+                              <Typography sx={{ fontWeight: 800, fontSize: '0.8rem', color: '#137333' }}>
+                                {q.answered_by_name} <Typography component="span" sx={{ fontSize: '0.68rem', fontWeight: 400 }}>({q.answered_by_role})</Typography>
+                              </Typography>
+                            </Box>
+                            <Typography sx={{ fontSize: '0.83rem', color: '#137333', lineHeight: 1.5 }}>{q.answer}</Typography>
+                          </Box>
+                        )}
+
+                        {!q.answer && (user?.role === 'organization_admin' || user?.role === 'underwriter' || user?.role === 'agent') && (
+                          <Box sx={{ ml: 5, mt: 1.5 }}>
+                            <TextField fullWidth multiline rows={2} size="small"
+                              placeholder="Type official response..."
+                              value={answerInputs[q.id] || ''}
+                              onChange={(e) => setAnswerInputs(prev => ({ ...prev, [q.id]: e.target.value }))}
+                              disabled={answerQuestionMutation.isPending}
+                              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0} }}
+                            />
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                              <Button size="small" variant="contained"
+                                onClick={() => answerQuestionMutation.mutate({ questionId: q.id, answer: answerInputs[q.id] })}
+                                disabled={!answerInputs[q.id]?.trim() || answerQuestionMutation.isPending}
+                                sx={{ borderRadius: 0, fontWeight: 700 }}>
+                                {answerQuestionMutation.isPending ? 'Saving...' : 'Submit Answer'}
+                              </Button>
+                            </Box>
+                          </Box>
+                        )}
+                      </Box>
+                    ))}
+                  </List>
+                )}
+              </Box>
             )}
           </Box>
 
-          {/* Drawer Footer */}
-          <Box sx={{ p: 3, borderTop: '1px solid #E8EAED', bgcolor: '#F8F9FA', display: 'flex', justifyContent: 'flex-end' }}>
-            <Button variant="outlined" onClick={() => setDetailsOpen(false)} sx={{ borderRadius: 2, fontWeight: 700, px: 4 }}>Close Ledger View</Button>
+          {/* Footer */}
+          <Box sx={{ p: 2.5, borderTop: '1px solid #E8EAED', bgcolor: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {(selectedPolicy?.status === 'pending' || selectedPolicy?.status === 'documentation_review') && (
+              <Button variant="outlined" color="primary" startIcon={<DocsIcon />}
+                onClick={() => { setDetailsOpen(false); handleOpenDocGate(selectedPolicy); }}
+                sx={{ borderRadius: 0, fontWeight: 700 }}>
+                Manage Documents
+              </Button>
+            )}
+            <Box sx={{ ml: 'auto' }}>
+              <Button variant="outlined" onClick={() => { setDetailsOpen(false); setDetailsTab(0); }} sx={{ borderRadius: 0, fontWeight: 700, px: 4 }}>
+                Close
+              </Button>
+            </Box>
           </Box>
         </Box>
       </Drawer>

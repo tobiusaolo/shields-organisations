@@ -1,5 +1,5 @@
 import React from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Box, CircularProgress } from '@mui/material'
 
@@ -16,7 +16,8 @@ function LoadingScreen() {
 
 const ProtectedRoute = ({ children, allowedRoles, bypassKyc = false }) => {
   const { user, loading } = useAuth()
-  const location = window.location.pathname
+  const location = useLocation()
+  const path = location.pathname
   
   if (loading) return <LoadingScreen />
   if (!user) return <Navigate to="/login" replace />
@@ -31,22 +32,13 @@ const ProtectedRoute = ({ children, allowedRoles, bypassKyc = false }) => {
   // Platform Admins are exempted from this check as they are the verifiers
   const isKycVerified = user.kyc_status === 'verified' || user.kyc_status === 'approved'
   const isKycRestricted = user.role !== 'platform_admin' && !isKycVerified
-  const isOnKycPage = location === '/kyc'
-  const isOnProfilePage = location === '/profile'
-  
-  console.log('ProtectedRoute check:', {
-    userRole: user.role,
-    userKycStatus: user.kyc_status,
-    isKycVerified,
-    isKycRestricted,
-    isOnKycPage,
-    isOnProfilePage,
-    bypassKyc,
-    currentPath: location
-  })
+  const isOnKycPage = path.includes('kyc')
+  const isOnProfilePage = path.includes('profile')
   
   if (isKycRestricted && !isOnKycPage && !isOnProfilePage && !bypassKyc) {
-    return <Navigate to="/kyc" replace />
+    const isClient = user.role === 'client' || user.role === 'user'
+    const target = isClient ? '/client/kyc' : '/admin/kyc'
+    return <Navigate to={target} replace />
   }
 
   return children

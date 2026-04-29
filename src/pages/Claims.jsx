@@ -82,8 +82,8 @@ const SUMMARY_CARDS = [
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || { color: '#5F6368', bg: '#F1F3F4', dot: '#9AA0A6', label: status }
   return (
-    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.6, px: 1.25, py: 0.4, borderRadius: 6, bgcolor: cfg.bg }}>
-      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: cfg.dot }} />
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.6, px: 1.25, py: 0.4, borderRadius: 0, bgcolor: cfg.bg }}>
+      <Box sx={{ width: 6, height: 6, borderRadius: 0, bgcolor: cfg.dot }} />
       <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: cfg.color, lineHeight: 1 }}>{cfg.label}</Typography>
     </Box>
   )
@@ -93,8 +93,8 @@ function PayoutStatusBadge({ status }) {
   if (!status) return <Typography sx={{ fontSize: '0.75rem', color: '#9AA0A6' }}>Not Set</Typography>
   const cfg = PAYOUT_STATUS_CONFIG[status] || { color: '#5F6368', bg: '#F1F3F4', dot: '#9AA0A6', label: status }
   return (
-    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.3, borderRadius: 4, bgcolor: cfg.bg }}>
-      <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: cfg.dot }} />
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.3, borderRadius: 0, bgcolor: cfg.bg }}>
+      <Box sx={{ width: 4, height: 4, borderRadius: 0, bgcolor: cfg.dot }} />
       <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, color: cfg.color, lineHeight: 1 }}>{cfg.label}</Typography>
     </Box>
   )
@@ -236,7 +236,7 @@ export default function Claims() {
         <Button
           variant="outlined"
           startIcon={<DownloadIcon />}
-          sx={{ borderRadius: 2.5, fontWeight: 600, color: '#5F6368', borderColor: '#DADCE0' }}
+          sx={{ borderRadius: 0, fontWeight: 600, color: '#5F6368', borderColor: '#DADCE0' }}
         >
           Export
         </Button>
@@ -295,7 +295,7 @@ export default function Claims() {
                     <TableRow key={c.id} hover>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Box sx={{ width: 28, height: 28, borderRadius: 1.5, bgcolor: 'rgba(26,115,232,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Box sx={{ width: 28, height: 28, borderRadius: 0, bgcolor: 'rgba(26,115,232,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <ClaimIcon sx={{ fontSize: 14, color: '#1A73E8' }} />
                           </Box>
                           <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#202124', fontFamily: 'monospace' }}>
@@ -425,7 +425,7 @@ export default function Claims() {
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
         PaperProps={{
-          sx: { borderRadius: 2.5, border: '1px solid #E8EAED', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 180 },
+          sx: { borderRadius: 0, border: '1px solid #E8EAED', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 180 },
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
@@ -470,7 +470,7 @@ export default function Claims() {
           <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
             {selectedClaimForPayout && (
               <Box>
-                <Alert severity="info" sx={{ mb: 4, borderRadius: 3 }}>
+                <Alert severity="info" sx={{ mb: 4, borderRadius: 0}}>
                   Processing payout for Claim <strong>{selectedClaimForPayout.id.split('-')[0].toUpperCase()}</strong> with estimated amount <strong>{formatCurrency(selectedClaimForPayout.estimated_amount, selectedClaimForPayout.currency)}</strong>
                 </Alert>
 
@@ -482,7 +482,7 @@ export default function Claims() {
                         value={payoutForm.payout_method}
                         onChange={(e) => setPayoutForm(f => ({ ...f, payout_method: e.target.value }))}
                         size="small"
-                        sx={{ borderRadius: 2.5 }}
+                        sx={{ borderRadius: 0}}
                       >
                         <MenuItem value="mobile_money">Mobile Money (MTN, Airtel)</MenuItem>
                         <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
@@ -505,7 +505,7 @@ export default function Claims() {
                               <MobileIcon sx={{ fontSize: 18, color: '#5F6368' }} />
                             </InputAdornment>
                           ),
-                          sx: { borderRadius: 2.5 }
+                          sx: { borderRadius: 0}
                         }}
                       />
                     </Grid>
@@ -519,7 +519,7 @@ export default function Claims() {
                           value={payoutForm.payout_bank_name}
                           onChange={(e) => setPayoutForm(f => ({ ...f, payout_bank_name: e.target.value }))}
                           size="small"
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2.5 } }}
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0} }}
                         />
                       </Grid>
                       <Grid item xs={12}>
@@ -530,7 +530,7 @@ export default function Claims() {
                           value={payoutForm.payout_account_name}
                           onChange={(e) => setPayoutForm(f => ({ ...f, payout_account_name: e.target.value }))}
                           size="small"
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2.5 } }}
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0} }}
                         />
                       </Grid>
                       <Grid item xs={12}>
@@ -541,7 +541,7 @@ export default function Claims() {
                           value={payoutForm.payout_account_number}
                           onChange={(e) => setPayoutForm(f => ({ ...f, payout_account_number: e.target.value }))}
                           size="small"
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2.5 } }}
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0} }}
                         />
                       </Grid>
                     </>
@@ -557,7 +557,7 @@ export default function Claims() {
               fullWidth 
               variant="outlined" 
               onClick={handleClosePayoutModal} 
-              sx={{ borderRadius: 2.5, py: 1.25, fontWeight: 600 }}
+              sx={{ borderRadius: 0, py: 1.25, fontWeight: 600 }}
             >
               Cancel
             </Button>
@@ -567,7 +567,7 @@ export default function Claims() {
               variant="contained"
               disabled={payoutLoading}
               startIcon={payoutLoading ? <Spinner size={16} color="inherit" /> : <SendIcon />}
-              sx={{ borderRadius: 2.5, py: 1.25, fontWeight: 700 }}
+              sx={{ borderRadius: 0, py: 1.25, fontWeight: 700 }}
             >
               {payoutLoading ? 'Processing...' : 'Process Payout'}
             </Button>
