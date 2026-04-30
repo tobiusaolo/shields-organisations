@@ -118,6 +118,7 @@ export const policyAPI = {
   getQuotations: (orgId, params) => api.get(`/policies/organizations/${orgId}/quotations`, { params }),
   createPolicy: (orgId, data) => api.post(`/policies/organizations/${orgId}/policies`, data),
   createQuotation: (orgId, data) => api.post(`/policies/organizations/${orgId}/quotations`, data),
+  deletePolicy: (orgId, policyId) => api.delete(`/policies/organizations/${orgId}/policies/${policyId}`),
   // Policy Q&A
   createPolicyQuestion: (policyId, data) => api.post(`/policies/${policyId}/questions`, data),
   getPolicyQuestions: (policyId) => api.get(`/policies/${policyId}/questions`),
@@ -127,10 +128,14 @@ export const policyAPI = {
 
 export const claimAPI = {
   getClaims: (orgId, params) => api.get(`/claims/organizations/${orgId}/claims`, { params }),
+  getClaim: (orgId, claimId) => api.get(`/claims/organizations/${orgId}/claims/${claimId}`),
   getPolicyClaims: (orgId, policyId, params) => api.get(`/claims/organizations/${orgId}/policies/${policyId}/claims`, { params }),
   createClaim: (orgId, data) => api.post(`/claims/organizations/${orgId}/claims`, data),
-  uploadSignedDocuments: (orgId, policyId, documents) => api.post(`/policies/organizations/${orgId}/policies/${policyId}/signed-documents`, documents),
-  approvePolicyDocumentation: (orgId, policyId) => api.post(`/policies/organizations/${orgId}/policies/${policyId}/approve-documentation`),
+  updateClaim: (orgId, claimId, data) => api.put(`/claims/organizations/${orgId}/claims/${claimId}`, data),
+  deleteClaim: (orgId, claimId) => api.delete(`/claims/organizations/${orgId}/claims/${claimId}`),
+  uploadClaimDocument: (orgId, data) => api.post(`/claims/organizations/${orgId}/claim-documents`, data),
+  getClaimDocuments: (orgId, claimId) => api.get(`/claims/organizations/${orgId}/claims/${claimId}/documents`),
+  getClaimHistory: (orgId, claimId) => api.get(`/claims/organizations/${orgId}/claims/${claimId}/history`),
 }
 
 export const commissionAPI = {
@@ -203,7 +208,13 @@ export const publicAPI = {
   getProductTemplates: (productId) => api.get(`/public/products/${productId}/templates`),
   getTemplateFormsPublic: (productId, templateId) => api.get(`/public/products/${productId}/templates/${templateId}/forms`),
   createPublicQuotation: (data) => api.post('/public/quotations', data),
-  checkPolicyStatus: (policyNumber) => api.get('/public/policies/status', { params: { policy_number: policyNumber } }),
+  checkPolicyStatus: (policyNumberOrId) => {
+    // If it's a UUID (contains dashes and is 36 chars), treat as policy_id
+    const params = policyNumberOrId?.includes('-') && policyNumberOrId?.length > 20
+      ? { policy_id: policyNumberOrId }
+      : { policy_number: policyNumberOrId };
+    return api.get('/public/payment-status', { params });
+  },
   // Client Claims
   submitClaim: (data) => api.post('/public/claims/submit', data),
   getClaimStatus: (claimId) => api.get(`/public/claims/${claimId}/status`),
@@ -216,6 +227,8 @@ export const publicAPI = {
   initiatePesapalPayment: (orgId, policyId, params) => api.post(`/payments/organizations/${orgId}/pesapal/initiate/${policyId}`, null, { params }),
   createPublicPolicy: (data) => api.post('/public/policies', data),
   getPricingTiersPublic: (orgId, templateId) => api.get(`/public/organizations/${orgId}/pricing-tiers`, { params: { product_template_id: templateId } }),
+  getMyPolicies: () => api.get('/public/me/policies'),
+  getMyClaims: () => api.get('/public/me/claims'),
 }
 
 export const promotionAPI = {

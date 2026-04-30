@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import AuthContext from '../context/AuthContext'
 import { Box, CircularProgress } from '@mui/material'
 
 function LoadingScreen() {
@@ -15,9 +15,16 @@ function LoadingScreen() {
 }
 
 const ProtectedRoute = ({ children, allowedRoles, bypassKyc = false }) => {
-  const { user, loading } = useAuth()
+  // Use useContext directly so we get null instead of throwing when context
+  // is momentarily unavailable during React Fast Refresh hot-reloads
+  const auth = useContext(AuthContext)
   const location = useLocation()
   const path = location.pathname
+
+  // If context not ready yet (e.g. during hot reload), show loading
+  if (!auth) return <LoadingScreen />
+
+  const { user, loading } = auth
   
   if (loading) return <LoadingScreen />
   if (!user) return <Navigate to="/login" replace />
@@ -28,8 +35,6 @@ const ProtectedRoute = ({ children, allowedRoles, bypassKyc = false }) => {
   }
 
   // Mandatory KYC Check
-  // If not verified/approved, and not already on KYC or Profile page, redirect to KYC
-  // Platform Admins are exempted from this check as they are the verifiers
   const isKycVerified = user.kyc_status === 'verified' || user.kyc_status === 'approved'
   const isKycRestricted = user.role !== 'platform_admin' && !isKycVerified
   const isOnKycPage = path.includes('kyc')
