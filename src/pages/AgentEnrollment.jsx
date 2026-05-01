@@ -9,7 +9,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Select, MenuItem, FormControl, Checkbox, FormControlLabel, IconButton,
   Accordion, AccordionSummary, AccordionDetails, useTheme, OutlinedInput,
-  List, ListItem
+  List, ListItem, Autocomplete, Drawer, LinearProgress
 } from '@mui/material'
 import {
   ArrowBack as BackIcon,
@@ -30,12 +30,15 @@ import {
   KeyboardArrowRight as ArrowIcon,
   BusinessCenter as BusinessIcon,
   Info as InfoIcon,
-  Stars as TierIcon
+  Stars as TierIcon,
+  PersonAdd as PersonAddIcon,
+  Search as SearchIcon,
+  Close as CloseIcon
 } from '@mui/icons-material'
 import { publicAPI, tenancyAPI } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 
-const STEPS = ['Plan Details', 'Required Assessment', 'Review Quote', 'Payment']
+const STEPS = ['Select Client', 'Plan Details', 'Required Assessment', 'Review Quote', 'Payment']
 
 const DynamicTable = ({ field, value = [], onChange }) => {
   const columns = field.columns || []
@@ -156,15 +159,30 @@ const DynamicTable = ({ field, value = [], onChange }) => {
         </Button>
       </Box>
     </Box>
+
   )
 }
 
-export default function ClientProductDetails() {
-  const { id } = useParams()
+export default function AgentEnrollment() {
+  const { productId: id } = useParams()
   const navigate = useNavigate()
   const { user, refreshContext } = useAuth()
   const queryClient = useQueryClient()
   const [activeStep, setActiveStep] = useState(0)
+
+  const [selectedClient, setSelectedClient] = useState(null)
+  const [isRegisteringClient, setIsRegisteringClient] = useState(false)
+  const [registrationActiveStep, setRegistrationActiveStep] = useState(0)
+  const [registrationForm, setRegistrationForm] = useState({
+    first_name: '', last_name: '', email: '', phone: '', password: 'ClientInit123!',
+    nin: '', tin: '', address: '', documents: []
+  })
+  const [uploadedDocs, setUploadedDocs] = useState({
+    national_id_front: null, national_id_back: null, drivers_permit_front: null,
+    drivers_permit_back: null, selfie: null, passport_bio: null
+  })
+  const [registrationError, setRegistrationError] = useState('')
+
   const [expandedForm, setExpandedForm] = useState(0)
   const [formData, setFormData] = useState({
     coverageAmount: '',
@@ -182,6 +200,108 @@ export default function ClientProductDetails() {
   const [isCreatingQuote, setIsCreatingQuote] = useState(false)
   const [monthsToPay, setMonthsToPay] = useState(1) // For monthly products: how many installments to pay upfront
   const [isSavingDraft, setIsSavingDraft] = useState(false)
+
+// 1. Fetch Clients (Merging Organization & Personal Network)
+  const { data: clients = [], isLoading: clientsLoading } = useQuery({
+    queryKey: ['agent-enrollment-clients', user?.organization_id],
+    queryFn: async () => {
+      const orgId = user?.organization_id || user?.default_organization_id
+      if (!orgId) return []
+      
+      try {
+        const [orgRes, myRes] = await Promise.all([
+          tenancyAPI.getOrganizationClients(orgId),
+          tenancyAPI.getMyClients()
+        ])
+        
+        const orgClients = orgRes.data?.items || orgRes.data || []
+        const myClients = myRes.data?.items || myRes.data || []
+        
+        // Merge and deduplicate by ID or Email
+        const allClients = [...orgClients, ...myClients]
+        const uniqueClients = Array.from(new Map(allClients.map(c => [c.id, c])).values())
+        
+        console.log('Final Merged Clients:', uniqueClients)
+        return uniqueClients
+      } catch (err) {
+        console.error('Error fetching enrollment clients:', err)
+        return []
+      }
+    },
+    enabled: !!user
+  })
+
+  
+const handleFileUpload = (docType, file) => {
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setUploadedDocs(prev => ({ ...prev, [docType]: reader.result }))
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleFileRemove = (docType) => {
+    setUploadedDocs(prev => ({ ...prev, [docType]: null }))
+  }
+
+  const registerClientMutation = useMutation({
+    mutationFn: async (newData) => {
+      const { kyc_data, ...clientData } = newData
+      return await tenancyAPI.registerClient(clientData, kyc_data)
+    },
+    onSuccess: (res) => {
+      Swal.fire({
+        icon: 'success',
+        title: 'Registration Successful',
+        text: `Client ${registrationForm.first_name} registered successfully!`,
+        confirmButtonColor: '#1A73E8'
+      })
+      queryClient.invalidateQueries(['agent-enrollment-clients'])
+      setSelectedClient(res.data)
+      setIsRegisteringClient(false)
+      setRegistrationForm({
+        first_name: '', last_name: '', email: '', phone: '', password: 'ClientInit123!',
+        nin: '', tin: '', address: '', documents: []
+      })
+      setUploadedDocs({
+        selfie: null, national_id_front: null, national_id_back: null,
+        drivers_permit_front: null, drivers_permit_back: null, passport_bio: null
+      })
+      setRegistrationActiveStep(0)
+      setRegistrationError('')
+    },
+    onError: (err) => {
+      setRegistrationError(err.response?.data?.detail || 'Failed to register client.')
+    }
+  })
+
+  const handleRegisterClient = async () => {
+    setRegistrationError('')
+    if (!registrationForm.email || !registrationForm.first_name || !registrationForm.last_name || !registrationForm.phone) {
+      setRegistrationError('Please fill out all required fields.')
+      return
+    }
+
+    const documents = Object.keys(uploadedDocs)
+      .filter(key => uploadedDocs[key] !== null)
+      .map(key => ({
+        document_type: key,
+        file_url: uploadedDocs[key],
+        file_name: `${key}.jpg`
+      }))
+
+    registerClientMutation.mutate({
+      ...registrationForm,
+      kyc_data: {
+        nin: registrationForm.nin,
+        tin: registrationForm.tin,
+        address: registrationForm.address,
+        documents
+      }
+    })
+  }
 
   // Fetch product details
   const { data: product, isLoading: productLoading } = useQuery({
@@ -328,7 +448,7 @@ export default function ClientProductDetails() {
       }
 
       setIsCreatingQuote(false)
-      setActiveStep(2) // Move to Review Quote
+      setActiveStep(3) // Move to Review Quote
     },
     onError: (err) => {
       setIsCreatingQuote(false)
@@ -341,77 +461,6 @@ export default function ClientProductDetails() {
   const calculateDisplayPremium = () => {
     return Number(formData.premium || formData.coverageAmount || 0);
   };
-
-  const isLoading = productLoading || templatesLoading || formsLoading
-
-
-  const handleRiskFactorChange = (fieldId, value) => {
-    setFormData(prev => ({
-      ...prev,
-      riskFactors: {
-        ...prev.riskFactors,
-        [fieldId]: value
-      }
-    }))
-  }
-
-  const handleNext = () => {
-    if (activeStep === 0) {
-      setActiveStep(1)
-    } else if (activeStep === 1) {
-      // Enrich context with labels for better readability on the policies page
-      const enrichedContext = {}
-      dynamicForms.forEach(form => {
-        form.fields.forEach(field => {
-          const val = formData.riskFactors[field.field_key]
-          if (val !== undefined && val !== null && val !== '') {
-            const label = field.label || field.field_key
-            
-            // Handle table enrichment (nested fields)
-            if (field.field_type === 'table' && Array.isArray(val)) {
-              const columns = field.columns || []
-              const enrichedRows = val.map(row => {
-                const enrichedRow = {}
-                columns.forEach(col => {
-                  const cellVal = row[col.key || col.label]
-                  if (cellVal !== undefined && cellVal !== null) {
-                    enrichedRow[col.label || col.key] = cellVal
-                  }
-                })
-                return enrichedRow
-              })
-              enrichedContext[label] = enrichedRows
-            } else {
-              enrichedContext[label] = val
-            }
-          }
-        })
-      })
-
-      createQuote.mutate({
-        organization_id: product.organization_id,
-        policy_holder_email: user.email,
-        policy_holder_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Client',
-        policy_holder_phone: user.phone || '000000000',
-        product_template_id: activeTemplate?.id || '',
-        start_date: formData.startDate,
-        end_date: new Date(new Date(formData.startDate).setFullYear(new Date(formData.startDate).getFullYear() + (Number(product.duration_years) || 1))).toISOString().split('T')[0],
-        coverage_amount: Number(formData.coverageAmount) || product.max_coverage || 0,
-        premium_amount: Number(formData.premium) || activeTemplate?.base_premium || 0,
-        context: {
-          ...enrichedContext,
-          premium_amount: Number(formData.premium) || activeTemplate?.base_premium || 0
-        },
-        productId: product.id,
-        productName: product.name,
-        provider: product.provider_name
-      })
-    } else if (activeStep === 3) {
-      handleCompletePayment()
-    } else {
-      setActiveStep(activeStep + 1)
-    }
-  }
 
   const performSave = async () => {
     let qId = createdQuote?.id
@@ -446,16 +495,17 @@ export default function ClientProductDetails() {
       })
 
       const res = await publicAPI.createPublicQuotation({
-        organization_id: product.organization_id,
-        policy_holder_email: user.email,
-        policy_holder_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Client',
-        policy_holder_phone: user.phone || '000000000',
+        organization_id: product?.organization_id,
+        policy_holder_email: selectedClient?.email,
+        policy_holder_name: `${selectedClient?.first_name || ''} ${selectedClient?.last_name || ''}`.trim() || 'Client',
+        policy_holder_phone: selectedClient?.phone || '000000000',
+        policy_holder_id: selectedClient?.id,
         product_template_id: activeTemplate?.id || '',
         start_date: formData.startDate,
-        end_date: new Date(new Date(formData.startDate).setFullYear(new Date(formData.startDate).getFullYear() + (Number(product.duration_years) || 1))).toISOString().split('T')[0],
-        coverage_amount: Number(formData.coverageAmount) || product.max_coverage || 0,
+        end_date: new Date(new Date(formData.startDate).setFullYear(new Date(formData.startDate).getFullYear() + (Number(product?.duration_years) || 1))).toISOString().split('T')[0],
+        coverage_amount: Number(formData.coverageAmount) || product?.max_coverage || 0,
         context: enrichedContext,
-        productId: product.id
+        productId: product?.id
       })
       qId = res.data.id
       setCreatedQuote(res.data)
@@ -473,6 +523,7 @@ export default function ClientProductDetails() {
 
     if (typeof refreshContext === 'function') await refreshContext()
     queryClient.invalidateQueries(['my-policies'])
+    queryClient.invalidateQueries(['ledger'])
   }
 
   const handleSaveDraft = async () => {
@@ -482,11 +533,11 @@ export default function ClientProductDetails() {
       setIsSavingDraft(false)
       Swal.fire({
         title: 'Draft Saved!',
-        text: 'Your application has been saved to My Policies.',
+        text: 'The application has been saved to the Policy Ledger.',
         icon: 'success',
         confirmButtonColor: '#1A237E'
       }).then(() => {
-        navigate('/client/policies')
+        navigate('/admin/ledger')
       })
     } catch (err) {
       console.error("Draft save error:", err)
@@ -498,8 +549,8 @@ export default function ClientProductDetails() {
   // 20-Second Auto-Save Watchdog for Payment Step
   React.useEffect(() => {
     let timer
-    // If we are on the Payment step (index 3) and haven't saved the policy yet
-    if (activeStep === 3 && !createdPolicyId) {
+    // If we are on the Payment step (index 4) and haven't saved the policy yet
+    if (activeStep === 4 && !createdPolicyId) {
       timer = setTimeout(async () => {
         try {
           console.log("[AutoSave] User idling on payment step. Auto-saving draft...")
@@ -528,85 +579,109 @@ export default function ClientProductDetails() {
     setPaymentStatus('processing')
     setPaymentError(null)
 
-    // 30-second watchdog — if PesaPal takes too long, surface an error
-    const watchdog = setTimeout(() => {
-      setPaymentStatus('failed')
-      setPaymentError('The payment provider is taking too long to respond. Your policy has been saved — please try paying again from "My Policies".')
-    }, 30000)
-
     try {
-      const orgId = product.organization_id
-      let policyId = createdPolicyId || createdQuote?.policy_id || (createdQuote?.status === 'active' ? createdQuote?.id : null)
+      if (!product) throw new Error("Product data is missing")
 
-      // Fallback: If we somehow don't have a policy ID yet, convert it now
-      if (!policyId && createdQuote?.id) {
-        try {
-          const policyRes = await publicAPI.createPublicPolicy({ 
-            quotation_id: createdQuote.id,
-            payment_method: 'pesapal'
-          })
-          policyId = policyRes.data?.id
-          setCreatedPolicyId(policyRes.data?.id)
-          setCreatedPolicyNumber(policyRes.data?.policy_number)
-        } catch (error) {
-          const detail = error?.response?.data?.detail || error.message;
-          throw new Error(`Could not prepare your policy for payment: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
-        }
-      }
+      // 1. Make sure the policy is saved as a draft first
+      await performSave()
 
-      if (!orgId || !policyId) throw new Error('Missing policy or organisation details.')
-      
-      // === PAYMENT AMOUNT CALCULATION ===
-      // max_coverage = total contract value
-      // Monthly: user selects how many installments to pay upfront (monthsToPay)
-      // Annual: pay full max_coverage
-
-      const frequency = activeTemplate?.pricing_frequency?.toLowerCase()
-      const maxCoverage = Number(createdQuote?.coverage_amount || product.max_coverage) || 0
-      const durationYears = Number(product.duration_years) || 1
-      const isMonthly = frequency === 'monthly' || frequency === 'month'
-      const basePremium = Number(formData.premium || activeTemplate?.base_premium || product?.base_premium || product?.max_coverage || 0)
-      const monthlyInstallment = isMonthly ? basePremium : Math.ceil(basePremium / 12)
-
-      let paymentAmount = 0
-      let monthsPaid = 1
-
-      if (isMonthly) {
-        monthsPaid = Math.max(1, Number(monthsToPay) || 1)
-        paymentAmount = monthlyInstallment * monthsPaid
+      // 2. Initiate Payment for the policy (using the active policy ID, NOT the quote ID)
+      if (createdPolicyId) {
+        const res = await publicAPI.initiatePesapalPayment(product.organization_id, createdPolicyId, { months_paid: monthsToPay })
+        // Redirect to Pesapal
+        window.location.href = res.data.redirect_url
       } else {
-        paymentAmount = basePremium
-        monthsPaid = durationYears * 12
+        throw new Error("Policy creation failed before payment.")
       }
-
-      if (!paymentAmount || paymentAmount <= 0) {
-        throw new Error('Could not determine a valid payment amount. Please contact support.')
-      }
-
-      console.log(`[Payment] frequency=${frequency}, maxCoverage=${maxCoverage}, monthsPaid=${monthsPaid}, paymentAmount=${paymentAmount}`)
-
-      // Initiate PesaPal payment — PesaPal handles phone/method on their checkout page
-      const res = await publicAPI.initiatePesapalPayment(orgId, policyId, { 
-        months_paid: monthsPaid, 
-        amount: paymentAmount
-      })
-      const redirectUrl = res.data?.redirect_url
-
-      if (!redirectUrl) throw new Error(res.data?.error || 'Could not get payment URL. Please try again.')
-
-      // DIRECT REDIRECT: This is the "Gold Standard" fix for the errors you saw.
-      // PesaPal's security scripts (Songbird/Check.js) are designed to run on a full page, 
-      // not in an iframe. Redirecting ensures all payment methods and security checks pass.
-      clearTimeout(watchdog)
-      window.location.href = redirectUrl
+      
     } catch (err) {
-      clearTimeout(watchdog)
-      console.error("Payment initiation failed:", err)
-      setPaymentStatus('failed')
-      const detail = err?.response?.data?.detail
-      setPaymentError(typeof detail === 'string' ? detail : (err.message || 'Payment initiation failed. Your policy is saved — try again from My Policies.'))
+      console.error('Payment initiation failed:', err)
+      setPaymentError('Payment failed to initiate. Please try again.')
+      setPaymentStatus('error')
     }
   }
+
+  const isLoading = productLoading || templatesLoading || formsLoading
+
+  const handleRiskFactorChange = (fieldId, value) => {
+    setFormData(prev => ({
+      ...prev,
+      riskFactors: {
+        ...prev.riskFactors,
+        [fieldId]: value
+      }
+    }))
+  }
+
+  const handleNext = () => {
+    if (activeStep === 0) {
+      if (!selectedClient) {
+        Swal.fire('Select Client', 'Please select a client to proceed.', 'warning')
+        return
+      }
+      setActiveStep(1)
+    } else if (activeStep === 1) {
+      if (!selectedTier) {
+        Swal.fire('Select Plan', 'Please select a coverage plan.', 'warning')
+        return
+      }
+      setActiveStep(2)
+    } else if (activeStep === 2) {
+      // Enrich context with labels for better readability on the policies page
+      const enrichedContext = {}
+      dynamicForms.forEach(form => {
+        form.fields.forEach(field => {
+          const val = formData.riskFactors[field.field_key]
+          if (val !== undefined && val !== null && val !== '') {
+            const label = field.label || field.field_key
+            
+            // Handle table enrichment (nested fields)
+            if (field.field_type === 'table' && Array.isArray(val)) {
+              const columns = field.columns || []
+              const enrichedRows = val.map(row => {
+                const enrichedRow = {}
+                columns.forEach(col => {
+                  const cellVal = row[col.key || col.label]
+                  if (cellVal !== undefined && cellVal !== null) {
+                    enrichedRow[col.label || col.key] = cellVal
+                  }
+                })
+                return enrichedRow
+              })
+              enrichedContext[label] = enrichedRows
+            } else {
+              enrichedContext[label] = val
+            }
+          }
+        })
+      })
+
+      createQuote.mutate({
+        organization_id: product.organization_id,
+        policy_holder_email: selectedClient?.email,
+        policy_holder_name: `${selectedClient?.first_name || ''} ${selectedClient?.last_name || ''}`.trim() || 'Client',
+        policy_holder_phone: selectedClient?.phone || '000000000',
+        policy_holder_id: selectedClient?.id,
+        product_template_id: activeTemplate?.id || '',
+        start_date: formData.startDate,
+        end_date: new Date(new Date(formData.startDate).setFullYear(new Date(formData.startDate).getFullYear() + (Number(product.duration_years) || 1))).toISOString().split('T')[0],
+        coverage_amount: Number(formData.coverageAmount) || product.max_coverage || 0,
+        premium_amount: Number(formData.premium) || activeTemplate?.base_premium || 0,
+        context: {
+          ...enrichedContext,
+          premium_amount: Number(formData.premium) || activeTemplate?.base_premium || 0
+        },
+        productId: product.id,
+        productName: product.name,
+        provider: product.provider_name
+      })
+    } else if (activeStep === 4) {
+      handleCompletePayment()
+    } else {
+      setActiveStep(activeStep + 1)
+    }
+  }
+
 
   if (isLoading) return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -617,7 +692,7 @@ export default function ClientProductDetails() {
   if (!product) return (
     <Box p={4} textAlign="center">
       <Typography variant="h5">Product not found</Typography>
-      <Button onClick={() => navigate('/client/products')}>Back to Marketplace</Button>
+      <Button onClick={() => navigate('/admin/products')}>Back to Products</Button>
     </Box>
   )
 
@@ -627,7 +702,7 @@ export default function ClientProductDetails() {
       <Paper elevation={0} sx={{ borderBottom: '1px solid #E8EAED', bgcolor: '#fff', position: 'sticky', top: 0, zIndex: 10, px: { xs: 2, md: 6 }, py: 2 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Stack direction="row" spacing={3} alignItems="center">
-            <IconButton onClick={() => navigate('/client/products')} size="small" sx={{ bgcolor: '#F8F9FA', '&:hover': { bgcolor: '#E8EAED' } }}>
+            <IconButton onClick={() => navigate(-1)} size="small" sx={{ bgcolor: '#F8F9FA', '&:hover': { bgcolor: '#E8EAED' } }}>
               <BackIcon sx={{ fontSize: 20, color: '#5F6368' }} />
             </IconButton>
             <Box>
@@ -680,7 +755,92 @@ export default function ClientProductDetails() {
         <Grid item xs={12} lg={8}>
           <Fade in timeout={500}>
             <Box>
-              {activeStep === 0 && (
+              {/* STEP 0: SELECT CLIENT */}
+        {activeStep === 0 && (
+          <Box>
+            <Stack direction="row" spacing={2} sx={{ mb: 4 }}>
+              <Autocomplete
+                fullWidth
+                options={clients}
+                getOptionLabel={(option) => {
+                  if (typeof option === 'string') return option
+                  if (option.inputValue) return option.inputValue
+                  return `${option.first_name || ''} ${option.last_name || ''} (${option.email || ''})`.trim()
+                }}
+                value={selectedClient}
+                onChange={(_, val) => {
+                  if (typeof val === 'string') {
+                  } else if (val && val.inputValue) {
+                    setIsRegisteringClient(true)
+                    setRegistrationForm(prev => ({ ...prev, first_name: val.inputValue }))
+                  } else {
+                    setSelectedClient(val)
+                  }
+                }}
+                filterOptions={(options, params) => {
+                  const filtered = options.filter(o => 
+                    `${o.first_name} ${o.last_name} ${o.email}`.toLowerCase().includes(params.inputValue.toLowerCase())
+                  )
+                  const { inputValue } = params;
+                  const isExisting = options.some((option) => inputValue === `${option.first_name} ${option.last_name}`);
+                  if (inputValue !== '' && !isExisting) {
+                    filtered.push({
+                      inputValue,
+                      first_name: `Register "${inputValue}" as new client`,
+                      last_name: '', email: '', isNew: true
+                    });
+                  }
+                  return filtered;
+                }}
+                renderOption={(props, option) => {
+                  const { key, ...optionProps } = props;
+                  return (
+                    <li key={key || (option.isNew ? 'new' : option.id)} {...optionProps}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {option.isNew ? <PersonAddIcon color="primary" /> : <SearchIcon color="action" />}
+                        <Typography sx={{ fontWeight: option.isNew ? 700 : 400 }}>
+                          {option.first_name} {option.last_name} {option.email ? `(${option.email})` : ''}
+                        </Typography>
+                      </Box>
+                    </li>
+                  );
+                }}
+                renderInput={(params) => (
+                  <TextField 
+                    {...params} 
+                    label="Search Existing Client or Type New Name" 
+                    variant="outlined" 
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon color="action" />
+                        </InputAdornment>
+                      )
+                    }}
+                  />
+                )}
+              />
+              <Button 
+                variant="outlined" 
+                startIcon={<AddIcon />} 
+                onClick={() => setIsRegisteringClient(true)}
+                sx={{ height: 56, px: 4, borderRadius: 0, whiteSpace: 'nowrap' }}
+              >
+                Register New
+              </Button>
+            </Stack>
+
+            <Box sx={{ mt: 4 }}>
+               <Alert severity="info" sx={{ borderRadius: 0 }}>
+                  Enrolling for product: <b>{product?.name || 'Loading...'}</b>
+               </Alert>
+            </Box>
+          </Box>
+        )}
+
+        
+              {activeStep === 1 && (
                 <Box>
                   {/* Product Overview Card */}
                   <Paper elevation={0} sx={{ p: { xs: 4, md: 5 }, borderRadius: 3, border: '1px solid #E8EAED', mb: 4, bgcolor: '#fff' }}>
@@ -828,7 +988,7 @@ export default function ClientProductDetails() {
                 </Box>
               )}
 
-              {activeStep === 1 && (
+              {activeStep === 2 && (
                 <Box>
                   {/* Dynamic Risk Forms Section */}
                   {dynamicForms && dynamicForms.length > 0 ? (
@@ -964,7 +1124,7 @@ export default function ClientProductDetails() {
                 </Box>
               )}
 
-              {activeStep === 2 && (
+              {activeStep === 3 && (
                 <Box>
                   <Paper elevation={0} sx={{ p: { xs: 4, md: 6 }, borderRadius: 3, border: '1px solid #E8EAED', mb: 4 }}>
                     <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 4 }}>
@@ -1152,7 +1312,7 @@ export default function ClientProductDetails() {
                   <Box sx={{ display: 'flex', gap: 2, mt: 4, flexWrap: 'wrap' }}>
                     <Button 
                       variant="outlined" 
-                      onClick={() => setActiveStep(1)}
+                      onClick={() => setActiveStep(2)}
                       sx={{ borderRadius: 2, px: 4, py: 1.5, borderColor: '#DADCE0', color: '#1A73E8', textTransform: 'none', fontWeight: 600 }}
                     >
                       Edit Assessment
@@ -1169,7 +1329,7 @@ export default function ClientProductDetails() {
                     </Button>
                     <Button 
                       variant="contained" 
-                      onClick={() => setActiveStep(3)}
+                      onClick={() => setActiveStep(4)}
                       sx={{ borderRadius: 2, px: 6, py: 1.5, bgcolor: '#1A73E8', textTransform: 'none', fontWeight: 600, boxShadow: '0 4px 14px rgba(26,115,232,0.3)', '&:hover': { bgcolor: '#1765CC', boxShadow: '0 6px 20px rgba(26,115,232,0.4)' } }}
                     >
                       Proceed to Checkout
@@ -1180,7 +1340,7 @@ export default function ClientProductDetails() {
 
               {/* Navigation Buttons are now at the very bottom of the view */}
 
-              {activeStep === 3 && paymentStatus === 'success' && (
+              {activeStep === 4 && paymentStatus === 'success' && (
                 <Box sx={{ textAlign: 'center', py: 6 }}>
                   <Avatar sx={{ width: 100, height: 100, bgcolor: '#E8F5E9', color: '#0F9D58', mx: 'auto', mb: 3 }}>
                     <SuccessIcon sx={{ fontSize: 60 }} />
@@ -1207,7 +1367,7 @@ export default function ClientProductDetails() {
 
                   <Button 
                     variant="contained" 
-                    onClick={() => navigate('/client/dashboard')}
+                    onClick={() => navigate('/admin/dashboard')}
                     sx={{ borderRadius: 3, px: 6, bgcolor: '#1A73E8', textTransform: 'none', fontWeight: 600 }}
                   >
                     Go to Dashboard
@@ -1215,7 +1375,7 @@ export default function ClientProductDetails() {
                 </Box>
               )}
 
-              {activeStep === 3 && paymentStatus === 'failed' && (
+              {activeStep === 4 && paymentStatus === 'failed' && (
                 <Box sx={{ textAlign: 'center', py: 6 }}>
                   <Avatar sx={{ width: 100, height: 100, bgcolor: '#FEEBEE', color: '#D93025', mx: 'auto', mb: 3 }}>
                     <WarningIcon sx={{ fontSize: 60 }} />
@@ -1233,7 +1393,7 @@ export default function ClientProductDetails() {
                     </Button>
                     <Button 
                       variant="outlined" 
-                      onClick={() => navigate('/client/dashboard')}
+                      onClick={() => navigate('/admin/dashboard')}
                       sx={{ borderRadius: 3, px: 4, borderColor: '#DADCE0', color: '#70757A', textTransform: 'none', fontWeight: 600 }}
                     >
                       Exit to Dashboard (Saved as Draft)
@@ -1242,7 +1402,7 @@ export default function ClientProductDetails() {
                 </Box>
               )}
 
-              {activeStep === 3 && paymentStatus === 'processing' && (
+              {activeStep === 4 && paymentStatus === 'processing' && (
                 <Box sx={{ textAlign: 'center', py: 10 }}>
                   <CircularProgress size={60} thickness={4} sx={{ color: '#1A73E8', mb: 3 }} />
                   <Typography variant="h5" sx={{ fontWeight: 600, color: '#202124', mb: 1 }}>Preparing Secure Payment...</Typography>
@@ -1262,7 +1422,7 @@ export default function ClientProductDetails() {
                 </Box>
               )}
 
-              {activeStep === 3 && paymentStatus === 'idle' && (
+              {activeStep === 4 && paymentStatus === 'idle' && (
                 <Box>
                   <Paper elevation={0} sx={{ p: { xs: 4, md: 6 }, borderRadius: 3, border: '1px solid #E8EAED', mb: 4, textAlign: 'center' }}>
                     <PaymentIcon sx={{ color: '#1A73E8', fontSize: 48, mb: 2 }} />
@@ -1313,10 +1473,10 @@ export default function ClientProductDetails() {
               )}
 
               {/* Navigation Buttons (Bottom) */}
-              {!(activeStep === 3 && paymentStatus !== 'idle') && (
+              {!(activeStep === 3 || (activeStep === 4 && paymentStatus !== 'idle')) && (
                 <Stack direction="row" justifyContent="space-between" sx={{ mt: 4, pt: 3, borderTop: '1px solid #E8EAED' }}>
                   <Box>
-                    {activeStep > 0 && activeStep < 3 && (
+                    {activeStep > 1 && activeStep < 4 && (
                       <Button 
                         variant="outlined"
                         onClick={() => setActiveStep(activeStep - 1)}
@@ -1325,10 +1485,10 @@ export default function ClientProductDetails() {
                         Back
                       </Button>
                     )}
-                    {activeStep === 3 && (
+                    {activeStep === 4 && (
                       <Button 
                         variant="text"
-                        onClick={() => setActiveStep(2)}
+                        onClick={() => setActiveStep(3)}
                         sx={{ borderRadius: 3, px: 4, py: 1.5, color: '#5F6368', textTransform: 'none', fontWeight: 600 }}
                       >
                         Back to Summary
@@ -1344,7 +1504,7 @@ export default function ClientProductDetails() {
                       boxShadow: '0 4px 14px rgba(26,115,232,0.3)', '&:hover': { bgcolor: '#1765CC', boxShadow: '0 6px 20px rgba(26,115,232,0.4)' }
                     }}
                   >
-                    {isCreatingQuote ? <CircularProgress size={20} color="inherit" /> : activeStep === 1 ? 'Generate Quote' : activeStep === 3 ? 'Complete Payment' : 'Continue'}
+                    {isCreatingQuote ? <CircularProgress size={20} color="inherit" /> : activeStep === 2 ? 'Generate Quote' : activeStep === 4 ? 'Complete Payment' : 'Continue'}
                   </Button>
                 </Stack>
               )}
@@ -1394,6 +1554,139 @@ export default function ClientProductDetails() {
       </Grid>
 
 
+      {/* FULL REGISTRATION DRAWER */}
+      <Drawer 
+        anchor="right" 
+        open={isRegisteringClient} 
+        onClose={() => setIsRegisteringClient(false)} 
+        PaperProps={{ sx: { width: 600, borderRadius: 0 } }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#fff' }}>
+          <Box sx={{ p: 3, borderBottom: '1px solid #E8EAED', bgcolor: '#F8F9FA' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h5" sx={{ fontWeight: 800, color: '#202124' }}>Register New Client</Typography>
+              <IconButton onClick={() => setIsRegisteringClient(false)} size="small"><ArrowIcon sx={{ transform: 'rotate(180deg)' }} /></IconButton>
+            </Box>
+            <Stepper activeStep={registrationActiveStep} alternativeLabel>
+              <Step><StepLabel>Basic Info</StepLabel></Step>
+              <Step><StepLabel>KYC & Documents</StepLabel></Step>
+            </Stepper>
+            {registerClientMutation.isPending && <LinearProgress sx={{ mt: 2 }} />}
+          </Box>
+
+          <Box sx={{ flex: 1, overflowY: 'auto', p: 4 }}>
+            {registrationError && <Alert severity="error" sx={{ mb: 3, borderRadius: 0 }}>{registrationError}</Alert>}
+
+            {registrationActiveStep === 0 && (
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6}>
+                  <TextField label="First Name" required fullWidth value={registrationForm.first_name} onChange={(e) => setRegistrationForm({ ...registrationForm, first_name: e.target.value })} />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField label="Last Name" required fullWidth value={registrationForm.last_name} onChange={(e) => setRegistrationForm({ ...registrationForm, last_name: e.target.value })} />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField label="Email Address" type="email" required fullWidth value={registrationForm.email} onChange={(e) => setRegistrationForm({ ...registrationForm, email: e.target.value })} />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField label="Phone Number" required fullWidth value={registrationForm.phone} onChange={(e) => setRegistrationForm({ ...registrationForm, phone: e.target.value })} />
+                </Grid>
+              </Grid>
+            )}
+
+            {registrationActiveStep === 1 && (
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6}>
+                  <TextField label="National ID (NIN)" required fullWidth value={registrationForm.nin} onChange={(e) => setRegistrationForm({ ...registrationForm, nin: e.target.value })} />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField label="Tax ID (TIN)" fullWidth value={registrationForm.tin} onChange={(e) => setRegistrationForm({ ...registrationForm, tin: e.target.value })} />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField label="Physical Address" required fullWidth multiline rows={2} value={registrationForm.address} onChange={(e) => setRegistrationForm({ ...registrationForm, address: e.target.value })} />
+                </Grid>
+
+                {/* National ID */}
+                <Grid item xs={12}>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#5F6368', mb: 1 }}>National ID Card</Typography>
+                  <Grid container spacing={1}>
+                    <Grid item xs={6}>
+                      <Box
+                        sx={{ border: '2px dashed #E8EAED', p: 2, textAlign: 'center', cursor: 'pointer', bgcolor: uploadedDocs.national_id_front ? '#F0FDF4' : '#FAFAFA' }}
+                        onClick={() => document.getElementById('enroll_id_front').click()}
+                      >
+                        {uploadedDocs.national_id_front ? (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <img src={uploadedDocs.national_id_front} alt="Front" style={{ width: '100%', maxHeight: '80px', objectFit: 'contain', marginBottom: '8px' }} />
+                            <Typography sx={{ fontSize: '0.75rem', color: '#16A34A', mt: 1 }}>Front Uploaded</Typography>
+                            <Button size="small" onClick={(e) => { e.stopPropagation(); handleFileRemove('national_id_front') }}>Remove</Button>
+                          </Box>
+                        ) : (
+                          <Box><DocIcon sx={{ fontSize: 32, color: '#9AA0A6' }} /><Typography sx={{ fontSize: '0.75rem', color: '#5F6368', mt: 1 }}>Upload Front</Typography></Box>
+                        )}
+                        <input type="file" id="enroll_id_front" hidden accept="image/*" onChange={(e) => handleFileUpload('national_id_front', e.target.files[0])} />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Box
+                        sx={{ border: '2px dashed #E8EAED', p: 2, textAlign: 'center', cursor: 'pointer', bgcolor: uploadedDocs.national_id_back ? '#F0FDF4' : '#FAFAFA' }}
+                        onClick={() => document.getElementById('enroll_id_back').click()}
+                      >
+                        {uploadedDocs.national_id_back ? (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <img src={uploadedDocs.national_id_back} alt="Back" style={{ width: '100%', maxHeight: '80px', objectFit: 'contain', marginBottom: '8px' }} />
+                            <Typography sx={{ fontSize: '0.75rem', color: '#16A34A', mt: 1 }}>Back Uploaded</Typography>
+                            <Button size="small" onClick={(e) => { e.stopPropagation(); handleFileRemove('national_id_back') }}>Remove</Button>
+                          </Box>
+                        ) : (
+                          <Box><DocIcon sx={{ fontSize: 32, color: '#9AA0A6' }} /><Typography sx={{ fontSize: '0.75rem', color: '#5F6368', mt: 1 }}>Upload Back</Typography></Box>
+                        )}
+                        <input type="file" id="enroll_id_back" hidden accept="image/*" onChange={(e) => handleFileUpload('national_id_back', e.target.files[0])} />
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Grid>
+
+                {/* Selfie */}
+                <Grid item xs={12}>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#5F6368', mb: 1 }}>Selfie (Photo of Face)</Typography>
+                  <Box
+                    sx={{ border: '2px dashed #E8EAED', p: 2, textAlign: 'center', cursor: 'pointer', bgcolor: uploadedDocs.selfie ? '#F0FDF4' : '#FAFAFA' }}
+                    onClick={() => document.getElementById('enroll_selfie').click()}
+                  >
+                    {uploadedDocs.selfie ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <Avatar src={uploadedDocs.selfie} sx={{ width: 80, height: 80, mb: 1, border: '2px solid #16A34A' }} />
+                        <Typography sx={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 600 }}>Selfie Uploaded</Typography>
+                        <Button size="small" onClick={(e) => { e.stopPropagation(); handleFileRemove('selfie') }}>Remove</Button>
+                      </Box>
+                    ) : (
+                      <Box><PersonAddIcon sx={{ fontSize: 32, color: '#9AA0A6' }} /><Typography sx={{ fontSize: '0.75rem', color: '#5F6368', mt: 1 }}>Upload Selfie</Typography></Box>
+                    )}
+                    <input type="file" id="enroll_selfie" hidden accept="image/*" onChange={(e) => handleFileUpload('selfie', e.target.files[0])} />
+                  </Box>
+                </Grid>
+              </Grid>
+            )}
+
+            <Box sx={{ mt: 4, p: 2, bgcolor: '#F8F9FA', borderRadius: 0, border: '1px solid #E8EAED' }}>
+               <Typography sx={{ fontSize: '0.8rem', color: '#5F6368', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <VerifiedIcon sx={{ fontSize: 16, color: '#1A73E8' }} />
+                  Registration will auto-verify the client so they can immediately proceed with the enrollment.
+               </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ p: 2, borderTop: '1px solid #E8EAED', display: 'flex', justifyContent: 'space-between', bgcolor: '#fff' }}>
+            <Button disabled={registrationActiveStep === 0 || registerClientMutation.isPending} onClick={() => setRegistrationActiveStep(prev => prev - 1)} sx={{ fontWeight: 700 }}>Back</Button>
+            {registrationActiveStep === 0 ? (
+              <Button variant="contained" onClick={() => setRegistrationActiveStep(prev => prev + 1)} sx={{ borderRadius: 0, fontWeight: 700 }}>Next Step</Button>
+            ) : (
+              <Button variant="contained" color="primary" onClick={handleRegisterClient} disabled={registerClientMutation.isPending} sx={{ borderRadius: 0, fontWeight: 700 }}>Confirm Registration</Button>
+            )}
+          </Box>
+        </Box>
+      </Drawer>
     </Box>
   )
 }

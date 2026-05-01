@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productAPI, formAPI, commissionAPI } from '../services/api'
 import { formatCurrency } from '../utils/formatters'
@@ -68,6 +69,7 @@ import {
   Info as InfoIcon,
   CheckCircleOutline as CheckIcon,
   ContentCopy as DuplicateIcon,
+  ShoppingCart as PurchaseIcon,
 } from '@mui/icons-material'
 const CATEGORIES = [
   { value: 'life', label: 'Life Insurance' },
@@ -113,6 +115,7 @@ const STEPS = ['Basic Info', 'Pricing & Coverage', 'Commissions', 'Compliance Fo
 
 export default function Products() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const orgId = user?.organization_id
   const queryClient = useQueryClient()
   
@@ -945,6 +948,7 @@ export default function Products() {
                 </CardContent>
                 <Divider />
                 <CardActions sx={{ justifyContent: 'flex-end', p: 2, gap: 1 }}>
+                  <Button startIcon={<PurchaseIcon />} size="small" color="secondary" onClick={() => navigate(`/admin/enroll/${product.id}`)}>Purchase</Button>
                   <Button startIcon={<ViewIcon />} size="small" onClick={() => { setSelectedProductId(product.id); setInspectorOpen(true) }}>View</Button>
                   <IconButton color="primary" size="small" onClick={() => handleEditProduct(product)} disabled={isHierarchyLoading}>
                     <EditIcon />

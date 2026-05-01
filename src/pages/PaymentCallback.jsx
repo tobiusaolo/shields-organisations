@@ -13,10 +13,16 @@ import {
   Security as ShieldIcon,
 } from '@mui/icons-material'
 import { publicAPI } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 export default function PaymentCallback() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  
+  const isStaff = user?.role && ['admin', 'organization_admin', 'agent', 'broker', 'senior_agent'].includes(user.role)
+  const dashboardPath = isStaff ? '/admin/ledger' : '/client'
+  const dashboardLabel = isStaff ? 'Go to Policy Ledger' : 'Go to Dashboard'
 
   const trackingId = searchParams.get('OrderTrackingId')
   const reference  = searchParams.get('OrderMerchantReference')
@@ -135,10 +141,10 @@ export default function PaymentCallback() {
             <Stack spacing={2}>
               <Button
                 variant="contained" fullWidth startIcon={<HomeIcon />}
-                onClick={() => navigate('/client')}
+                onClick={() => navigate(dashboardPath)}
                 sx={{ borderRadius: 0, py: 1.5, textTransform: 'none', fontWeight: 600, bgcolor: '#1A73E8', boxShadow: 'none' }}
               >
-                Go to Dashboard
+                {dashboardLabel}
               </Button>
               <Button
                 variant="outlined" fullWidth startIcon={<DownloadIcon />}
@@ -180,10 +186,10 @@ export default function PaymentCallback() {
               </Button>
               <Button
                 variant="outlined" fullWidth startIcon={<HomeIcon />}
-                onClick={() => navigate('/client')}
+                onClick={() => navigate(dashboardPath)}
                 sx={{ borderRadius: 0, py: 1.5, textTransform: 'none', fontWeight: 600, borderColor: '#DADCE0', color: '#5F6368' }}
               >
-                Go to Dashboard (Draft Saved)
+                {dashboardLabel} (Draft Saved)
               </Button>
             </Stack>
           </Box>

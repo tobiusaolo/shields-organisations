@@ -1,36 +1,20 @@
-import React, { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import React, { useState, useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
-import { claimAPI } from '../services/api'
+import { claimAPI, formAPI, policyAPI } from '../services/api'
 import { formatCurrency } from '../utils/formatters'
 import {
-  Box,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Button,
-  TextField,
-  InputAdornment,
-  Pagination,
-  MenuItem,
-  IconButton,
-  Menu,
-  Skeleton,
-  Chip,
-  Tooltip,
-  Divider,
-  Grid,
-  Card,
-  CardContent,
-  Avatar,
-  CircularProgress as Spinner,
-  Alert,
-  Drawer,
+  Box, Typography, Table, TableBody, TableCell, 
+  TableContainer, TableHead, TableRow, Paper, 
+  Button, TextField, InputAdornment, Pagination, 
+  MenuItem, IconButton, Menu, Skeleton, Chip, 
+  Tooltip, Divider, Grid, Card, CardContent, 
+  Avatar, CircularProgress as Spinner, Alert, 
+  Drawer, Stack, Tab, Tabs, FormControl, Select,
+  TableContainer as MuiTableContainer,
+  Table as MuiTable,
+  TableHead as MuiTableHead,
+  TableBody as MuiTableBody
 } from '@mui/material'
 import {
   Search as SearchIcon,
@@ -50,66 +34,42 @@ import {
   PhoneAndroid as MobileIcon,
   Send as SendIcon,
   Close as CloseIcon,
+  Person as PersonIcon,
+  Description as DocIcon,
+  MonetizationOn as CommIcon,
+  ContentPaste as FormIcon,
+  FilterList as FilterIcon
 } from '@mui/icons-material'
 
-// Deleted CLAIMS mock payload
-
 const STATUS_CONFIG = {
-  reported: { color: '#E37400', bg: '#FEF3E2', dot: '#F9AB00', icon: PendingIcon, label: 'Reported' },
-  under_review: { color: '#1A73E8', bg: '#E8F0FE', dot: '#4A90F7', icon: ReviewIcon, label: 'Under Review' },
-  documents_pending: { color: '#F9AB00', bg: '#FEF7E0', dot: '#F9AB00', icon: PendingIcon, label: 'Docs Pending' },
-  assessed: { color: '#7B61FF', bg: '#F3EDFF', dot: '#7B61FF', icon: ReviewIcon, label: 'Assessed' },
-  approved: { color: '#1E8E3E', bg: '#E6F4EA', dot: '#34A853', icon: ApprovedIcon, label: 'Approved' },
-  paid: { color: '#1E8E3E', bg: '#E6F4EA', dot: '#34A853', icon: ApprovedIcon, label: 'Paid' },
-  rejected: { color: '#D93025', bg: '#FCE8E6', dot: '#EA4335', icon: RejectedIcon, label: 'Rejected' },
-  closed: { color: '#5F6368', bg: '#F1F3F4', dot: '#9AA0A6', icon: ApprovedIcon, label: 'Closed' }
-}
-
-const PAYOUT_STATUS_CONFIG = {
-  pending: { color: '#E37400', bg: '#FEF3E2', dot: '#F9AB00', label: 'Pending' },
-  processing: { color: '#1A73E8', bg: '#E8F0FE', dot: '#4285F4', label: 'Processing' },
-  completed: { color: '#1E8E3E', bg: '#E6F4EA', dot: '#34A853', label: 'Completed' },
-  failed: { color: '#D93025', bg: '#FCE8E6', dot: '#EA4335', label: 'Failed' }
-}
-
-const SUMMARY_CARDS = [
-  { label: 'Reported', key: 'reported', icon: PendingIcon },
-  { label: 'Under Review', key: 'under_review', icon: ReviewIcon },
-  { label: 'Approved', key: 'approved', icon: ApprovedIcon },
-  { label: 'Paid', key: 'paid', icon: ApprovedIcon },
-]
-
-function StatusBadge({ status }) {
-  const cfg = STATUS_CONFIG[status] || { color: '#5F6368', bg: '#F1F3F4', dot: '#9AA0A6', label: status }
-  return (
-    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.6, px: 1.25, py: 0.4, borderRadius: 0, bgcolor: cfg.bg }}>
-      <Box sx={{ width: 6, height: 6, borderRadius: 0, bgcolor: cfg.dot }} />
-      <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: cfg.color, lineHeight: 1 }}>{cfg.label}</Typography>
-    </Box>
-  )
-}
-
-function PayoutStatusBadge({ status }) {
-  if (!status) return <Typography sx={{ fontSize: '0.75rem', color: '#9AA0A6' }}>Not Set</Typography>
-  const cfg = PAYOUT_STATUS_CONFIG[status] || { color: '#5F6368', bg: '#F1F3F4', dot: '#9AA0A6', label: status }
-  return (
-    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.3, borderRadius: 0, bgcolor: cfg.bg }}>
-      <Box sx={{ width: 4, height: 4, borderRadius: 0, bgcolor: cfg.dot }} />
-      <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, color: cfg.color, lineHeight: 1 }}>{cfg.label}</Typography>
-    </Box>
-  )
+  reported: { color: '#E37400', bg: '#FEF3E2', dot: '#F9AB00', label: 'Reported' },
+  under_review: { color: '#1A73E8', bg: '#E8F0FE', dot: '#4A90F7', label: 'Under Review' },
+  documents_pending: { color: '#F9AB00', bg: '#FEF7E0', dot: '#F9AB00', label: 'Docs Pending' },
+  assessed: { color: '#7B61FF', bg: '#F3EDFF', dot: '#7B61FF', label: 'Assessed' },
+  approved: { color: '#1E8E3E', bg: '#E6F4EA', dot: '#34A853', label: 'Approved' },
+  paid: { color: '#1E8E3E', bg: '#E6F4EA', dot: '#34A853', label: 'Paid' },
+  rejected: { color: '#D93025', bg: '#FCE8E6', dot: '#EA4335', label: 'Rejected' },
+  closed: { color: '#5F6368', bg: '#F1F3F4', dot: '#9AA0A6', label: 'Closed' }
 }
 
 export default function Claims() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const organizationId = user?.organization_id
+
   const [page, setPage] = useState(1)
   const rowsPerPage = 10
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  
+  // Menu & Drawer State
   const [anchorEl, setAnchorEl] = useState(null)
-  const [selected, setSelected] = useState(null)
+  const [selectedClaim, setSelectedClaim] = useState(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState(0)
+  
+  // Payout State
   const [payoutModalOpen, setPayoutModalOpen] = useState(false)
-  const [selectedClaimForPayout, setSelectedClaimForPayout] = useState(null)
   const [payoutLoading, setPayoutLoading] = useState(false)
   const [payoutForm, setPayoutForm] = useState({
     payout_method: 'mobile_money',
@@ -119,458 +79,442 @@ export default function Claims() {
     payout_account_number: '',
   })
 
-  const handleOpenPayoutModal = (claim) => {
-    setSelectedClaimForPayout(claim)
-    setPayoutForm({
-      payout_method: claim.payout_method || 'mobile_money',
-      payout_phone_number: claim.payout_phone_number || '',
-      payout_bank_name: claim.payout_bank_name || '',
-      payout_account_name: claim.payout_account_name || '',
-      payout_account_number: claim.payout_account_number || '',
-    })
-    setPayoutModalOpen(true)
-  }
-
-  const handleClosePayoutModal = () => {
-    setPayoutModalOpen(false)
-    setSelectedClaimForPayout(null)
-    setPayoutLoading(false)
-  }
-
-  const handleProcessPayout = async () => {
-    if (!selectedClaimForPayout) return
-    setPayoutLoading(true)
-    try {
-      // Call API to process payout
-      // await claimAPI.processPayout(user.organization_id, selectedClaimForPayout.id, payoutForm)
-      console.log('Processing payout for claim:', selectedClaimForPayout.id, payoutForm)
-      handleClosePayoutModal()
-    } catch (error) {
-      console.error('Error processing payout:', error)
-    } finally {
-      setPayoutLoading(false)
-    }
-  }
+  // Form Data State
+  const [claimForms, setClaimForms] = useState([])
+  const [formsLoading, setFormsLoading] = useState(false)
 
   const { data, isLoading: loading } = useQuery({
-    queryKey: ['claims', user?.organization_id, page, statusFilter, search],
+    queryKey: ['claims', organizationId, page, statusFilter, search],
     queryFn: async () => {
       const params = {
         skip: (page - 1) * rowsPerPage,
         limit: rowsPerPage,
       }
       if (statusFilter !== 'all') params.status = statusFilter
-      const res = await claimAPI.getClaims(user.organization_id, params)
+      const res = await claimAPI.getClaims(organizationId, params)
       return res.data
     },
-    enabled: !!user?.organization_id
+    enabled: !!organizationId
   })
+
+  useEffect(() => {
+    if (selectedClaim && drawerOpen) {
+      fetchClaimForms()
+    }
+  }, [selectedClaim, drawerOpen])
+
+  const fetchClaimForms = async () => {
+    if (!selectedClaim?.product_template_id) return
+    setFormsLoading(true)
+    try {
+      // Assuming claims also use product templates or specific claim forms
+      const res = await formAPI.getTemplateForms(organizationId, selectedClaim.product_template_id)
+      setClaimForms(res.data || [])
+    } catch (err) {
+      console.error("Error fetching claim forms:", err)
+      setClaimForms([])
+    } finally {
+      setFormsLoading(false)
+    }
+  }
 
   const paginated = data?.items || []
   const totalItems = data?.total || 0
-  const claimsLength = paginated.length
 
-  const countByStatus = (s) => paginated.filter(c => c.status === s).length
+  const handleOpenDrawer = (claim) => {
+    setSelectedClaim(claim)
+    setDrawerOpen(true)
+    setActiveTab(0)
+    setAnchorEl(null)
+  }
+
+  const handleOpenPayout = () => {
+    setPayoutForm({
+      payout_method: selectedClaim.payout_method || 'mobile_money',
+      payout_phone_number: selectedClaim.payout_phone_number || '',
+      payout_bank_name: selectedClaim.payout_bank_name || '',
+      payout_account_name: selectedClaim.payout_account_name || '',
+      payout_account_number: selectedClaim.payout_account_number || '',
+    })
+    setPayoutModalOpen(true)
+    setAnchorEl(null)
+  }
+
+  const renderValue = (val) => {
+    if (!val) return 'Not provided';
+    if (Array.isArray(val)) {
+      if (val.length === 0) return 'No entries';
+      const keys = Object.keys(val[0] || {});
+      return (
+        <MuiTableContainer component={Paper} elevation={0} sx={{ border: '1px solid #F1F3F4', mt: 1, borderRadius: 1 }}>
+          <MuiTable size="small">
+            <MuiTableHead sx={{ bgcolor: '#F8F9FA' }}>
+              <TableRow>
+                {keys.map(k => <TableCell key={k} sx={{ py: 0.5, fontSize: '0.65rem', fontWeight: 800, color: '#70757A' }}>{k.toUpperCase()}</TableCell>)}
+              </TableRow>
+            </MuiTableHead>
+            <MuiTableBody>
+              {val.map((row, i) => (
+                <TableRow key={i}>
+                  {keys.map(k => <TableCell key={k} sx={{ py: 0.5, fontSize: '0.7rem' }}>{String(row[k] || '-')}</TableCell>)}
+                </TableRow>
+              ))}
+            </MuiTableBody>
+          </MuiTable>
+        </MuiTableContainer>
+      );
+    }
+    if (typeof val === 'object') return JSON.stringify(val);
+    return String(val);
+  };
 
   return (
-    <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 4, flexWrap: 'wrap', gap: 2 }}>
+    <Box sx={{ p: 4, bgcolor: '#F8F9FE', minHeight: '100vh' }}>
+      {/* Header Section */}
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, color: '#202124', mb: 0.5 }}>Claims</Typography>
-          <Typography sx={{ color: '#5F6368', fontSize: '0.9rem' }}>
-            Manage and track insurance claim lifecycles
+          <Typography variant="h4" sx={{ fontWeight: 900, color: '#1A237E', mb: 0.5 }}>Claim Ledger</Typography>
+          <Typography variant="body2" sx={{ color: '#546E7A', fontWeight: 500 }}>
+            Modern administrative oversight of organizational claims and payout distribution.
           </Typography>
         </Box>
+        <Stack direction="row" spacing={2}>
+          <Button variant="outlined" startIcon={<DownloadIcon />} sx={{ borderRadius: 0, fontWeight: 700, borderColor: '#E0E0E0', color: '#546E7A' }}>
+            Export Report
+          </Button>
+          <Button variant="contained" startIcon={<PayoutIcon />} sx={{ borderRadius: 0, bgcolor: '#1A237E', fontWeight: 700, px: 3 }}>
+            Reconciliation
+          </Button>
+        </Stack>
       </Box>
 
-      {/* Status Summary Cards */}
-      <Grid container spacing={2} sx={{ mb: 3.5 }}>
-        {SUMMARY_CARDS.map(({ label, key, icon: Icon }) => {
-          const cfg = STATUS_CONFIG[key]
-          const count = countByStatus(key)
-          return (
-            <Grid item xs={6} sm={3} key={key}>
-              <Card
-                elevation={0}
-                onClick={() => { setStatusFilter(key === statusFilter ? 'all' : key); setPage(1) }}
-                sx={{
-                  cursor: 'pointer',
-                  border: `1.5px solid ${statusFilter === key ? cfg.color : '#E8EAED'}`,
-                  bgcolor: statusFilter === key ? cfg.bg : '#FFFFFF',
-                  transition: 'all 0.15s',
-                  '&:hover': { borderColor: cfg.color, bgcolor: cfg.bg },
-                }}
-              >
-                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                    <Icon sx={{ fontSize: 18, color: cfg.color }} />
-                    <Typography sx={{ fontWeight: 800, fontSize: '1.4rem', color: cfg.color }}>{count}</Typography>
-                  </Box>
-                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: cfg.color }}>{label}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          )
-        })}
+      {/* Stats Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {[
+          { label: 'Total Claims', value: totalItems, color: '#1A237E', icon: <ClaimIcon /> },
+          { label: 'Pending Review', value: paginated.filter(c => c.status === 'reported').length, color: '#E37400', icon: <PendingIcon /> },
+          { label: 'Approved Claims', value: paginated.filter(c => c.status === 'approved').length, color: '#2E7D32', icon: <ApprovedIcon /> },
+          { label: 'Total Payouts (UGX)', value: paginated.reduce((acc, c) => acc + (parseFloat(c.estimated_amount) || 0), 0).toLocaleString(), color: '#1A237E', icon: <CommIcon />, isCurrency: true },
+        ].map((item, idx) => (
+          <Grid item xs={12} sm={6} md={3} key={idx}>
+            <Card sx={{ borderRadius: 0, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid #E3F2FD' }}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#90A4AE', textTransform: 'uppercase' }}>{item.label}</Typography>
+                  <Box sx={{ color: item.color, opacity: 0.8 }}>{item.icon}</Box>
+                </Box>
+                <Typography variant="h4" sx={{ fontWeight: 900, color: '#263238' }}>{item.value}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
       </Grid>
 
-      {/* Search */}
-      <Paper elevation={1} sx={{ p: 2, mb: 2.5, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-        <TextField
-          size="small"
-          placeholder="Search claims…"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: '#9AA0A6', fontSize: 18 }} />
-              </InputAdornment>
-            ),
-            sx: { fontSize: '0.875rem' },
-          }}
-          sx={{ minWidth: 260, flexGrow: 1, maxWidth: 400 }}
-        />
-        <Box sx={{ flexGrow: 1 }} />
-        <Button
-          variant="outlined"
-          startIcon={<DownloadIcon />}
-          sx={{ borderRadius: 0, fontWeight: 600, color: '#5F6368', borderColor: '#DADCE0' }}
-        >
-          Export
-        </Button>
-        {statusFilter !== 'all' && (
-          <Chip
-            label={`Filter: ${statusFilter}`}
-            onDelete={() => setStatusFilter('all')}
+      {/* Table Controls */}
+      <Card sx={{ borderRadius: 0, mb: 3, boxShadow: 'none', border: '1px solid #E8EAED' }}>
+        <Box sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+          <TextField 
+            placeholder="Search by claim ID, claimant or policy..." 
             size="small"
-            sx={{
-              bgcolor: STATUS_CONFIG[statusFilter]?.bg,
-              color: STATUS_CONFIG[statusFilter]?.color,
-              fontWeight: 600,
+            fullWidth
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0, bgcolor: '#fff' } }}
+            InputProps={{
+              startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#90A4AE' }} /></InputAdornment>
             }}
           />
-        )}
-      </Paper>
+          <IconButton sx={{ bgcolor: '#F5F5F5', borderRadius: 0 }}>
+            <FilterIcon />
+          </IconButton>
+        </Box>
+      </Card>
 
-      {/* Table */}
-      <Paper elevation={1} sx={{ overflow: 'hidden' }}>
-        <TableContainer>
-          <Table>
-            <TableHead>
+      {/* Claims Table */}
+      <TableContainer component={Paper} sx={{ borderRadius: 0, boxShadow: '0 4px 25px rgba(0,0,0,0.06)', border: '1px solid #E8EAED' }}>
+        <Table>
+          <TableHead sx={{ bgcolor: '#F8F9FA' }}>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 800, color: '#546E7A' }}>CLAIM ID</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#546E7A' }}>CLAIMANT / POLICY</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#546E7A' }}>CLAIM TYPE</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#546E7A' }}>AMOUNT (UGX)</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#546E7A' }}>STATUS</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#546E7A' }}>PAYOUT STATUS</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: '#546E7A' }} align="right">ACTIONS</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {loading ? (
+              [1,2,3,4,5].map(i => (
+                <TableRow key={i}><TableCell colSpan={7}><Skeleton height={40} /></TableCell></TableRow>
+              ))
+            ) : paginated.length === 0 ? (
               <TableRow>
-                <TableCell>Claim ID</TableCell>
-                <TableCell>Policy / Claimant</TableCell>
-                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Type</TableCell>
-                <TableCell>Amount</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Payout Method</TableCell>
-                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Payout Status</TableCell>
-                <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>Reported</TableCell>
-                <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>Days Open</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell colSpan={7} sx={{ textAlign: 'center', py: 10 }}>
+                  <Typography sx={{ color: '#90A4AE', fontWeight: 600 }}>No claims found.</Typography>
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading
-                ? [1, 2, 3, 4].map((i) => (
-                    <TableRow key={i}>
-                      {[1, 2, 3, 4, 5].map((j) => (
-                        <TableCell key={j}><Skeleton height={20} /></TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                : paginated.length === 0
-                  ? (
-                    <TableRow>
-                      <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
-                        <ClaimIcon sx={{ fontSize: 48, color: '#E8EAED', display: 'block', mx: 'auto', mb: 1.5 }} />
-                        <Typography sx={{ fontWeight: 600, color: '#5F6368' }}>No claims found</Typography>
-                        <Typography sx={{ fontSize: '0.82rem', color: '#9AA0A6', mt: 0.5 }}>Try adjusting your search or filters</Typography>
-                      </TableCell>
-                    </TableRow>
-                  )
-                  : paginated.map((c) => (
-                    <TableRow key={c.id} hover>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Box sx={{ width: 28, height: 28, borderRadius: 0, bgcolor: 'rgba(26,115,232,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <ClaimIcon sx={{ fontSize: 14, color: '#1A73E8' }} />
-                          </Box>
-                          <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#202124', fontFamily: 'monospace' }}>
-                            {c.id.split('-')[0].toUpperCase()}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Avatar sx={{ width: 28, height: 28, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#E8F0FE', color: '#1A73E8' }}>
-                            {(c.reported_by_membership_id || 'U')[0].toUpperCase()}
-                          </Avatar>
-                          <Box>
-                            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#202124' }}>
-                              {c.reported_by_membership_id}
-                            </Typography>
-                            <Typography sx={{ fontSize: '0.75rem', color: '#9AA0A6' }}>{c.policy_id}</Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                        <Chip
-                          label={c.claim_type ? c.claim_type.replace('_', ' ') : ''}
-                          size="small"
-                          sx={{ height: 22, fontSize: '0.7rem', fontWeight: 600, bgcolor: '#F1F3F4', color: '#5F6368', textTransform: 'capitalize' }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#202124' }}>
-                          {formatCurrency(c.estimated_amount, c.currency)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell><StatusBadge status={c.status} /></TableCell>
-                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                        {c.payout_method ? (
-                          <Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              {c.payout_method === 'mobile_money' ? (
-                                <MobileIcon sx={{ fontSize: 16, color: '#1A73E8' }} />
-                              ) : (
-                                <BankIcon sx={{ fontSize: 16, color: '#1E8E3E' }} />
-                              )}
-                              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#202124' }}>
-                                {c.payout_method === 'mobile_money' ? 'Mobile' : 'Bank'}
-                              </Typography>
-                            </Box>
-                            <Typography sx={{ fontSize: '0.7rem', color: '#5F6368', mt: 0.5 }}>
-                              {c.payout_method === 'mobile_money' ? c.payout_phone_number : `${c.payout_bank_name} - ${c.payout_account_number}`}
-                            </Typography>
-                          </Box>
-                        ) : (
-                          <Typography sx={{ fontSize: '0.75rem', color: '#9AA0A6' }}>-</Typography>
-                        )}
-                      </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                        <PayoutStatusBadge status={c.payout_status} />
-                      </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
-                        <Typography sx={{ fontSize: '0.8rem', color: '#5F6368' }}>{c.incident_date}</Typography>
-                      </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
-                        <Chip
-                          label={`${Math.max(0, Math.floor((new Date() - new Date(c.incident_date)) / (1000 * 60 * 60 * 24)))}d`}
-                          size="small"
-                          sx={{
-                            height: 22, fontSize: '0.7rem', fontWeight: 700,
-                            bgcolor: '#FEF3E2',
-                            color: '#E37400',
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                          <Tooltip title="View details">
-                            <IconButton size="small" sx={{ color: '#5F6368', '&:hover': { color: 'primary.main' } }}>
-                              <ViewIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          {(c.status === 'approved' || c.status === 'assessed') && (
-                            <Tooltip title="Process Payout">
-                              <IconButton
-                                size="small"
-                                sx={{ color: '#1A73E8', '&:hover': { color: '#1765CC' } }}
-                                onClick={() => handleOpenPayoutModal(c)}
-                              >
-                                <SendIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                          <Tooltip title="More actions">
-                            <IconButton
-                              size="small"
-                              sx={{ color: '#5F6368' }}
-                              onClick={(e) => { setAnchorEl(e.currentTarget); setSelected(c) }}
-                            >
-                              <MoreIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))
-              }
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        {!loading && totalItems > 0 && (
-          <Box sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #F1F3F4' }}>
-            <Typography sx={{ fontSize: '0.8rem', color: '#9AA0A6' }}>
-              Showing {((page - 1) * rowsPerPage) + 1}–{Math.min(page * rowsPerPage, totalItems)} of {totalItems}
-            </Typography>
-            <Pagination
-              count={Math.ceil(totalItems / rowsPerPage)}
-              page={page}
-              onChange={(_, v) => setPage(v)}
-              color="primary"
-              size="small"
-              shape="rounded"
-            />
-          </Box>
-        )}
-      </Paper>
+            ) : paginated.map((claim) => {
+              const status = STATUS_CONFIG[claim.status] || { label: claim.status, color: '#546E7A', bg: '#F5F5F5' }
+              return (
+                <TableRow key={claim.id} hover>
+                  <TableCell sx={{ fontWeight: 700, color: '#1A73E8', fontFamily: 'monospace' }}>
+                    {claim.id.split('-')[0].toUpperCase()}
+                  </TableCell>
+                  <TableCell>
+                    <Typography sx={{ fontWeight: 600, fontSize: '0.85rem' }}>{claim.claimant_name || claim.reported_by_membership_id}</Typography>
+                    <Typography variant="caption" sx={{ color: '#90A4AE' }}>{claim.policy_id}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={claim.claim_type?.replace(/_/g, ' ')} size="small" sx={{ fontWeight: 700, borderRadius: 0, textTransform: 'uppercase', fontSize: '0.65rem' }} />
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>{parseFloat(claim.estimated_amount || 0).toLocaleString()}</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderRadius: '4px', bgcolor: status.bg }}>
+                      <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, color: status.color }}>{status.label.toUpperCase()}</Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={claim.payout_status || 'Pending'} size="small" variant="outlined" sx={{ fontWeight: 700, fontSize: '0.65rem' }} />
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton size="small" onClick={(e) => { setAnchorEl(e.currentTarget); setSelectedClaim(claim) }}>
+                      <MoreIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
-        PaperProps={{
-          sx: { borderRadius: 0, border: '1px solid #E8EAED', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 180 },
-        }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        PaperProps={{ sx: { borderRadius: 0, border: '1px solid #E8EAED', width: 200 } }}
       >
-        <MenuItem onClick={() => setAnchorEl(null)} sx={{ py: 1.25, px: 2, gap: 1.5, fontSize: '0.85rem' }}>
-          <ViewIcon sx={{ fontSize: 18, color: '#5F6368' }} /> View Claim
+        <MenuItem onClick={() => handleOpenDrawer(selectedClaim)} sx={{ fontWeight: 600, fontSize: '0.85rem', gap: 2 }}>
+          <ViewIcon fontSize="small" color="primary" /> View Claim
         </MenuItem>
-        <MenuItem onClick={() => setAnchorEl(null)} sx={{ py: 1.25, px: 2, gap: 1.5, fontSize: '0.85rem' }}>
-          <EditIcon sx={{ fontSize: 18, color: '#5F6368' }} /> Update Status
-        </MenuItem>
-        <MenuItem onClick={() => setAnchorEl(null)} sx={{ py: 1.25, px: 2, gap: 1.5, fontSize: '0.85rem' }}>
-          <DownloadIcon sx={{ fontSize: 18, color: '#5F6368' }} /> Download Report
+        <MenuItem onClick={handleOpenPayout} sx={{ fontWeight: 600, fontSize: '0.85rem', gap: 2 }}>
+          <PayoutIcon fontSize="small" color="success" /> Process Payout
         </MenuItem>
         <Divider />
-        <MenuItem onClick={() => setAnchorEl(null)} sx={{ py: 1.25, px: 2, gap: 1.5, fontSize: '0.85rem', color: '#D93025' }}>
-          <DeleteIcon sx={{ fontSize: 18 }} /> Close Claim
+        <MenuItem onClick={() => setAnchorEl(null)} sx={{ fontWeight: 600, fontSize: '0.85rem', gap: 2, color: 'error.main' }}>
+          <DeleteIcon fontSize="small" /> Close Claim
         </MenuItem>
       </Menu>
 
-      {/* Payout Processing Drawer */}
+      {/* Claim Detail Drawer */}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        PaperProps={{ sx: { width: { xs: '100%', sm: 700 }, borderRadius: 0 } }}
+      >
+        {selectedClaim && (
+          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ p: 3, bgcolor: '#1A237E', color: '#fff' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Box>
+                  <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 700, textTransform: 'uppercase' }}>Claim Master Record</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 900 }}>{selectedClaim.id.split('-')[0].toUpperCase()}</Typography>
+                </Box>
+                <Chip 
+                  label={selectedClaim.status.toUpperCase()} 
+                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#fff', fontWeight: 800, borderRadius: '4px' }} 
+                />
+              </Box>
+              <Stack direction="row" spacing={3}>
+                <Box>
+                  <Typography sx={{ fontSize: '0.7rem', opacity: 0.7 }}>Claim Amount</Typography>
+                  <Typography sx={{ fontWeight: 800 }}>UGX {parseFloat(selectedClaim.estimated_amount || 0).toLocaleString()}</Typography>
+                </Box>
+                <Box>
+                  <Typography sx={{ fontSize: '0.7rem', opacity: 0.7 }}>Incident Date</Typography>
+                  <Typography sx={{ fontWeight: 800 }}>{selectedClaim.incident_date}</Typography>
+                </Box>
+              </Stack>
+            </Box>
+
+            <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ borderBottom: '1px solid #E8EAED', px: 2 }}>
+              <Tab label="Overview" icon={<DocIcon sx={{ fontSize: 18 }} />} iconPosition="start" sx={{ fontWeight: 700 }} />
+              <Tab label="Claimant" icon={<PersonIcon sx={{ fontSize: 18 }} />} iconPosition="start" sx={{ fontWeight: 700 }} />
+              <Tab label="Form Data" icon={<FormIcon sx={{ fontSize: 18 }} />} iconPosition="start" sx={{ fontWeight: 700 }} />
+              <Tab label="Payout" icon={<BankIcon sx={{ fontSize: 18 }} />} iconPosition="start" sx={{ fontWeight: 700 }} />
+            </Tabs>
+
+            <Box sx={{ p: 3, flex: 1, overflowY: 'auto', bgcolor: '#F8F9FA' }}>
+              {activeTab === 0 && (
+                <Stack spacing={3}>
+                  <Card elevation={0} sx={{ border: '1px solid #E8EAED', borderRadius: 0 }}>
+                    <CardContent>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2, color: '#546E7A' }}>Claim Information</Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Typography variant="caption" sx={{ color: '#90A4AE' }}>Claim Type</Typography>
+                          <Typography sx={{ fontWeight: 600 }}>{selectedClaim.claim_type?.replace(/_/g, ' ')}</Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="caption" sx={{ color: '#90A4AE' }}>Policy Reference</Typography>
+                          <Typography sx={{ fontWeight: 600 }}>{selectedClaim.policy_id}</Typography>
+                        </Grid>
+                        <Grid item xs={12}>
+                          <Typography variant="caption" sx={{ color: '#90A4AE' }}>Incident Description</Typography>
+                          <Typography sx={{ fontWeight: 500, fontSize: '0.9rem' }}>{selectedClaim.description || 'No description provided.'}</Typography>
+                        </Grid>
+                      </Grid>
+                    </CardContent>
+                  </Card>
+                </Stack>
+              )}
+
+              {activeTab === 1 && (
+                <Stack spacing={3}>
+                  <Box sx={{ textAlign: 'center', py: 2 }}>
+                    <Avatar sx={{ width: 64, height: 64, mx: 'auto', mb: 1, bgcolor: '#1A237E' }}>
+                      <PersonIcon sx={{ fontSize: 32 }} />
+                    </Avatar>
+                    <Typography variant="h6" sx={{ fontWeight: 800 }}>{selectedClaim.claimant_name}</Typography>
+                    <Typography variant="body2" sx={{ color: '#546E7A' }}>{selectedClaim.claimant_email}</Typography>
+                  </Box>
+                  <Divider />
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <Typography variant="caption" sx={{ color: '#90A4AE', fontWeight: 700 }}>MEMBERSHIP ID</Typography>
+                      <Typography sx={{ fontWeight: 600 }}>{selectedClaim.reported_by_membership_id}</Typography>
+                    </Grid>
+                  </Grid>
+                  <Alert severity="info" sx={{ borderRadius: 0 }}>
+                    KYC documentation for this claimant is attached to the parent policy record.
+                  </Alert>
+                </Stack>
+              )}
+
+              {activeTab === 2 && (
+                <Stack spacing={3}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#546E7A' }}>Claim Assessment Data</Typography>
+                    {formsLoading && <Spinner size={20} />}
+                  </Box>
+
+                  {claimForms.length > 0 ? (
+                    claimForms.map((form) => (
+                      <Card key={form.id} elevation={0} sx={{ border: '1px solid #E8EAED', borderRadius: 0, overflow: 'hidden' }}>
+                        <Box sx={{ p: 2, bgcolor: '#F8F9FA', borderBottom: '1px solid #E8EAED' }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1A237E' }}>{form.name}</Typography>
+                        </Box>
+                        <Box>
+                          {form.fields.map((field) => {
+                            const value = selectedClaim.context?.[field.label] || selectedClaim.context?.[field.field_key];
+                            if (field.field_type === 'section') {
+                              return (
+                                <Box key={field.id} sx={{ p: 2, bgcolor: '#F1F3F4', borderBottom: '1px solid #E8EAED' }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#1A237E', textTransform: 'uppercase' }}>{field.label}</Typography>
+                                </Box>
+                              );
+                            }
+                            return (
+                              <Box key={field.id} sx={{ p: 2, borderBottom: '1px solid #F5F5F5' }}>
+                                <Typography variant="caption" sx={{ color: '#90A4AE', fontWeight: 700, textTransform: 'uppercase', display: 'block', mb: 0.5 }}>{field.label}</Typography>
+                                <Box sx={{ fontWeight: 600, fontSize: '0.9rem' }}>{renderValue(value)}</Box>
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      </Card>
+                    ))
+                  ) : (
+                    <Box sx={{ textAlign: 'center', py: 8, bgcolor: '#fff', border: '1px dashed #E8EAED' }}>
+                      <FormIcon sx={{ fontSize: 48, color: '#E0E0E0', mb: 2 }} />
+                      <Typography variant="body2" sx={{ color: '#90A4AE', fontWeight: 600 }}>No detailed assessment data available.</Typography>
+                    </Box>
+                  )}
+                </Stack>
+              )}
+
+              {activeTab === 3 && (
+                <Stack spacing={3}>
+                   <Card elevation={0} sx={{ border: '1px solid #E8EAED', bgcolor: '#E8F5E9', borderRadius: 0 }}>
+                    <CardContent>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2, color: '#2E7D32' }}>Payout Information</Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Typography variant="caption" sx={{ color: '#546E7A' }}>Method</Typography>
+                          <Typography sx={{ fontWeight: 700 }}>{selectedClaim.payout_method?.replace(/_/g, ' ') || 'Not Set'}</Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="caption" sx={{ color: '#546E7A' }}>Status</Typography>
+                          <Typography sx={{ fontWeight: 700, color: '#2E7D32' }}>{selectedClaim.payout_status || 'Pending'}</Typography>
+                        </Grid>
+                        <Grid item xs={12}>
+                          <Typography variant="caption" sx={{ color: '#546E7A' }}>Account / Phone</Typography>
+                          <Typography sx={{ fontWeight: 700, fontSize: '1.1rem' }}>
+                            {selectedClaim.payout_method === 'mobile_money' ? selectedClaim.payout_phone_number : selectedClaim.payout_account_number || 'N/A'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </CardContent>
+                  </Card>
+                </Stack>
+              )}
+            </Box>
+
+            <Box sx={{ p: 2, borderTop: '1px solid #E8EAED', display: 'flex', gap: 2 }}>
+              <Button fullWidth variant="outlined" sx={{ borderRadius: 0, fontWeight: 700 }}>Reject Claim</Button>
+              <Button fullWidth variant="contained" onClick={handleOpenPayout} sx={{ borderRadius: 0, bgcolor: '#1A237E', fontWeight: 700 }}>Approve & Pay</Button>
+            </Box>
+          </Box>
+        )}
+      </Drawer>
+
+      {/* Payout Modal */}
       <Drawer
         anchor="right"
         open={payoutModalOpen}
-        onClose={handleClosePayoutModal}
-        PaperProps={{
-          sx: { width: { xs: '100%', sm: 550 }, border: 'none', boxShadow: '-8px 0 32px rgba(0,0,0,0.1)' }
-        }}
+        onClose={() => setPayoutModalOpen(false)}
+        PaperProps={{ sx: { width: { xs: '100%', sm: 500 }, borderRadius: 0 } }}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          {/* Drawer Header */}
-          <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E8EAED' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <PayoutIcon sx={{ color: '#1A73E8' }} />
-              <Typography variant="h6" sx={{ fontWeight: 800 }}>Process Claim Payout</Typography>
-            </Box>
-            <IconButton onClick={handleClosePayoutModal} size="small">
-              <CloseIcon />
-            </IconButton>
-          </Box>
+        <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="h5" sx={{ fontWeight: 900, mb: 1 }}>Process Payout</Typography>
+          <Typography variant="body2" sx={{ color: '#546E7A', mb: 4 }}>Configure the disbursement details for this claim.</Typography>
+          
+          <Stack spacing={3} sx={{ flex: 1 }}>
+            <FormControl fullWidth>
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, mb: 1, color: '#1A237E' }}>Payout Method</Typography>
+              <Select
+                value={payoutForm.payout_method}
+                onChange={(e) => setPayoutForm(f => ({ ...f, payout_method: e.target.value }))}
+                size="small"
+                sx={{ borderRadius: 0 }}
+              >
+                <MenuItem value="mobile_money">Mobile Money</MenuItem>
+                <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
+              </Select>
+            </FormControl>
 
-          {/* Drawer Content */}
-          <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
-            {selectedClaimForPayout && (
-              <Box>
-                <Alert severity="info" sx={{ mb: 4, borderRadius: 0}}>
-                  Processing payout for Claim <strong>{selectedClaimForPayout.id.split('-')[0].toUpperCase()}</strong> with estimated amount <strong>{formatCurrency(selectedClaimForPayout.estimated_amount, selectedClaimForPayout.currency)}</strong>
-                </Alert>
-
-                <Grid container spacing={3}>
-                  <Grid item xs={12}>
-                    <FormControl fullWidth>
-                      <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, mb: 1.5, color: '#202124' }}>Select Payout Method</Typography>
-                      <Select
-                        value={payoutForm.payout_method}
-                        onChange={(e) => setPayoutForm(f => ({ ...f, payout_method: e.target.value }))}
-                        size="small"
-                        sx={{ borderRadius: 0}}
-                      >
-                        <MenuItem value="mobile_money">Mobile Money (MTN, Airtel)</MenuItem>
-                        <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  {payoutForm.payout_method === 'mobile_money' ? (
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="Phone Number"
-                        placeholder="e.g., 256700123456"
-                        value={payoutForm.payout_phone_number}
-                        onChange={(e) => setPayoutForm(f => ({ ...f, payout_phone_number: e.target.value }))}
-                        size="small"
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <MobileIcon sx={{ fontSize: 18, color: '#5F6368' }} />
-                            </InputAdornment>
-                          ),
-                          sx: { borderRadius: 0}
-                        }}
-                      />
-                    </Grid>
-                  ) : (
-                    <>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Bank Name"
-                          placeholder="e.g., Stanbic Bank"
-                          value={payoutForm.payout_bank_name}
-                          onChange={(e) => setPayoutForm(f => ({ ...f, payout_bank_name: e.target.value }))}
-                          size="small"
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0} }}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Account Name"
-                          placeholder="As it appears on bank records"
-                          value={payoutForm.payout_account_name}
-                          onChange={(e) => setPayoutForm(f => ({ ...f, payout_account_name: e.target.value }))}
-                          size="small"
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0} }}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Account Number"
-                          placeholder="e.g., 9030001234567"
-                          value={payoutForm.payout_account_number}
-                          onChange={(e) => setPayoutForm(f => ({ ...f, payout_account_number: e.target.value }))}
-                          size="small"
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0} }}
-                        />
-                      </Grid>
-                    </>
-                  )}
-                </Grid>
-              </Box>
+            {payoutForm.payout_method === 'mobile_money' ? (
+              <TextField
+                fullWidth
+                label="Phone Number"
+                value={payoutForm.payout_phone_number}
+                onChange={(e) => setPayoutForm(f => ({ ...f, payout_phone_number: e.target.value }))}
+                InputProps={{ sx: { borderRadius: 0 } }}
+              />
+            ) : (
+              <>
+                <TextField label="Bank Name" fullWidth InputProps={{ sx: { borderRadius: 0 } }} />
+                <TextField label="Account Number" fullWidth InputProps={{ sx: { borderRadius: 0 } }} />
+              </>
             )}
-          </Box>
+          </Stack>
 
-          {/* Drawer Footer */}
-          <Box sx={{ p: 3, borderTop: '1px solid #E8EAED', display: 'flex', gap: 2 }}>
-            <Button 
-              fullWidth 
-              variant="outlined" 
-              onClick={handleClosePayoutModal} 
-              sx={{ borderRadius: 0, py: 1.25, fontWeight: 600 }}
-            >
-              Cancel
-            </Button>
-            <Button
-              fullWidth 
-              onClick={handleProcessPayout}
-              variant="contained"
-              disabled={payoutLoading}
-              startIcon={payoutLoading ? <Spinner size={16} color="inherit" /> : <SendIcon />}
-              sx={{ borderRadius: 0, py: 1.25, fontWeight: 700 }}
-            >
-              {payoutLoading ? 'Processing...' : 'Process Payout'}
-            </Button>
+          <Box sx={{ pt: 3, borderTop: '1px solid #E8EAED', display: 'flex', gap: 2 }}>
+            <Button fullWidth variant="outlined" onClick={() => setPayoutModalOpen(false)} sx={{ borderRadius: 0, fontWeight: 700 }}>Cancel</Button>
+            <Button fullWidth variant="contained" sx={{ borderRadius: 0, bgcolor: '#1A237E', fontWeight: 700 }}>Confirm Payout</Button>
           </Box>
         </Box>
       </Drawer>

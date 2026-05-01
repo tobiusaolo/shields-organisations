@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://insurance-backend-fk1k.onrender.com'
+export const API_BASE_URL = 'https://insurance-backend-fk1k.onrender.com'
 
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api/v1`,
@@ -70,8 +70,12 @@ export const tenancyAPI = {
   resetUserPassword: (userId, data) => api.put(`/tenancy/users/${userId}/password/reset`, data),
 
   // Client Management (Personal Portfolio)
-  registerClient: (data, kycData) => api.post('/tenancy/clients', { ...data, kyc_data: kycData }),
+  registerClient: (data, kycData) => api.post('/tenancy/clients', { client_data: data, kyc_data: kycData }),
+  updateClient: (clientId, data) => api.put(`/tenancy/clients/${clientId}`, data),
+  deleteClient: (clientId) => api.delete(`/tenancy/clients/${clientId}`),
   getMyClients: (params) => api.get('/tenancy/clients', { params }),
+  getOrganizationClients: (orgId, params) => api.get(`/tenancy/organizations/${orgId}/clients`, { params }),
+  getClientPortfolioScoped: (orgId, clientId) => api.get(`/tenancy/organizations/${orgId}/clients/${clientId}/portfolio`),
   getPendingPolicies: () => api.get('/tenancy/users/me/pending-policies'),
   getOrganizationPendingPolicies: (orgId) => api.get(`/tenancy/organizations/${orgId}/pending-policies`),
 }

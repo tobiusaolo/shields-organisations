@@ -17,8 +17,10 @@ import Products from './pages/Products'
 import Promotions from './pages/Promotions'
 import PolicyLedger from './pages/PolicyLedger'
 import Clients from './pages/Clients'
+import MyEnrolledClients from './pages/MyEnrolledClients'
 import Layout from './components/Layout'
 import ClientLayout from './components/ClientLayout'
+import AgentEnrollment from './pages/AgentEnrollment'
 import LandingPage from './pages/LandingPage'
 import ClientDashboard from './pages/ClientDashboard'
 import ClientProducts from './pages/ClientProducts'
@@ -51,7 +53,7 @@ function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
-            
+
             {/* Payment Callback (public - PesaPal redirects here) */}
             <Route path="/client/payment/callback" element={<PaymentCallback />} />
 
@@ -60,34 +62,34 @@ function App() {
             <Route path="/client/register" element={<ClientRegister />} />
             <Route path="/admin/login" element={<Login portal="admin" />} />
             <Route path="/admin/register" element={<Register portal="admin" />} />
-            
+
             {/* Legacy/Redirect Auth */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
             {/* Organization / Admin Portal */}
             <Route path="/admin" element={
-              <ProtectedRoute allowedRoles={['platform_admin', 'organization_admin', 'underwriter', 'agent', 'claims_officer']}>
+              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent', 'team_lead', 'claims_officer', 'read_only']}>
                 <Layout><Dashboard /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/admin/policies" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent', 'team_lead', 'claims_officer', 'read_only']}>
                 <Layout><Policies /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/admin/claims" element={
-              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'claims_officer', 'underwriter', 'broker', 'read_only']}>
+              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent', 'team_lead', 'claims_officer', 'read_only']}>
                 <Layout><Claims /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/admin/commissions" element={
-              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'agent', 'broker', 'senior_agent', 'team_lead']}>
+              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent', 'team_lead']}>
                 <Layout><Commissions /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/admin/products" element={
-              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'underwriter']}>
+              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent']}>
                 <Layout><Products /></Layout>
               </ProtectedRoute>
             } />
@@ -97,12 +99,12 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/admin/settings" element={
-              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'platform_admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent', 'platform_admin']}>
                 <Layout><Settings /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/admin/kyc" element={
-              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'platform_admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'underwriter', 'platform_admin']}>
                 <Layout><KYC /></Layout>
               </ProtectedRoute>
             } />
@@ -111,9 +113,19 @@ function App() {
                 <Layout><Team /></Layout>
               </ProtectedRoute>
             } />
+            <Route path="/admin/enroll/:productId?" element={
+              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent']}>
+                <Layout><AgentEnrollment /></Layout>
+              </ProtectedRoute>
+            } />
             <Route path="/admin/clients" element={
-              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'agent', 'broker', 'senior_agent', 'underwriter']}>
+              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent', 'team_lead']}>
                 <Layout><Clients /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/my-network" element={
+              <ProtectedRoute allowedRoles={['agent', 'broker', 'senior_agent', 'team_lead']}>
+                <Layout><MyEnrolledClients /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/admin/promotions" element={
@@ -122,7 +134,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/admin/ledger" element={
-              <ProtectedRoute allowedRoles={['admin', 'organization_admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent']}>
                 <Layout><PolicyLedger /></Layout>
               </ProtectedRoute>
             } />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import { policyAPI, promotionAPI, formAPI, productAPI } from '../services/api'
@@ -97,6 +97,7 @@ function StatusBadge({ status }) {
 export default function Policies() {
   const navigate = useNavigate()
   const { id: policyId } = useParams()
+  const location = useLocation()
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
@@ -215,6 +216,16 @@ export default function Policies() {
     }
   }, [policyId, policies])
 
+  // Handle preset client from navigation state
+  useEffect(() => {
+    if (location.state?.presetClient) {
+      setNewPolicy(prev => ({ ...prev, policy_holder_id: location.state.presetClient.id }))
+      setCreateOpen(true)
+      // Clear state after reading so it doesn't reopen on refresh
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
+
   const { data: questions, isLoading: questionsLoading } = useQuery({
     queryKey: ['policy-questions', selectedPolicy?.id],
     queryFn: async () => {
@@ -312,9 +323,6 @@ export default function Policies() {
         <Box sx={{ display: 'flex', gap: 1.5 }}>
           <Button variant="outlined" startIcon={<DownloadIcon />} sx={{ borderRadius: 0, fontWeight: 600, color: '#5F6368', borderColor: '#DADCE0' }}>
             Export
-          </Button>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ borderRadius: 0, fontWeight: 700 }}>
-            New Policy
           </Button>
         </Box>
       </Box>
@@ -525,21 +533,7 @@ export default function Policies() {
                         />
                       </TableCell>
                       <TableCell align="right">
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                          <Tooltip title="View Details">
-                            <IconButton size="small" onClick={() => { setSelectedPolicy(p); setDetailsOpen(true); }}>
-                              <ViewIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        
-                          {(p.status === 'pending' || p.status === 'documentation_review') && (
-                            <Tooltip title="Manage Documents">
-                              <IconButton size="small" color="primary" onClick={() => handleOpenDocGate(p)}>
-                                <DocsIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                           <Tooltip title="Policy Actions">
                             <IconButton
                               size="small"
@@ -586,26 +580,37 @@ export default function Policies() {
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
         PaperProps={{
-          sx: { borderRadius: 0, border: '1px solid #E8EAED', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 180 },
+          sx: { borderRadius: 0, border: '1px solid #000', boxShadow: '4px 4px 0px rgba(0,0,0,0.1)', minWidth: 200 },
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        <MenuItem onClick={() => { setAnchorEl(null); setSelectedPolicy(selected); setDetailsOpen(true) }} sx={{ py: 1.25, px: 2, gap: 1.5, fontSize: '0.85rem' }}>
-          <ViewIcon sx={{ fontSize: 18, color: '#5F6368' }} /> View Details & Q&A
+        <MenuItem onClick={() => { setAnchorEl(null); setSelectedPolicy(selected); setDetailsOpen(true) }}>
+          <ListItemIcon><ViewIcon fontSize="small" /></ListItemIcon>
+          <ListItemText primary="View Details & Q&A" />
         </MenuItem>
-        <MenuItem onClick={() => setAnchorEl(null)} sx={{ py: 1.25, px: 2, gap: 1.5, fontSize: '0.85rem' }}>
-          <EditIcon sx={{ fontSize: 18, color: '#5F6368' }} /> Edit Policy
+        {selected?.status === 'pending' && (
+          <MenuItem onClick={() => {
+            setAnchorEl(null);
+            publicAPI.initiatePesapalPayment(user.organization_id, selected.id, { amount: selected.premium, months_paid: 1 })
+              .then(res => { if(res.data?.redirect_url) window.location.href = res.data.redirect_url })
+          }}>
+            <ListItemIcon><PaymentIcon fontSize="small" color="success" /></ListItemIcon>
+            <ListItemText primary="Prompt Payment" />
+          </MenuItem>
+        )}
+        <MenuItem onClick={() => { setAnchorEl(null); handleOpenDocGate(selected) }}>
+          <ListItemIcon><DocsIcon fontSize="small" /></ListItemIcon>
+          <ListItemText primary="Manage Documents" />
         </MenuItem>
-        <MenuItem onClick={() => setAnchorEl(null)} sx={{ py: 1.25, px: 2, gap: 1.5, fontSize: '0.85rem' }}>
-          <DownloadIcon sx={{ fontSize: 18, color: '#5F6368' }} /> Download PDF
-        </MenuItem>
-        <MenuItem onClick={() => setAnchorEl(null)} sx={{ py: 1.25, px: 2, gap: 1.5, fontSize: '0.85rem' }}>
-          <CopyIcon sx={{ fontSize: 18, color: '#5F6368' }} /> Copy Policy No.
+        <MenuItem onClick={() => setAnchorEl(null)}>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+          <ListItemText primary="Edit Policy" />
         </MenuItem>
         <Divider />
-        <MenuItem onClick={() => setAnchorEl(null)} sx={{ py: 1.25, px: 2, gap: 1.5, fontSize: '0.85rem', color: '#D93025' }}>
-          <DeleteIcon sx={{ fontSize: 18 }} /> Cancel Policy
+        <MenuItem onClick={() => setAnchorEl(null)} sx={{ color: '#D93025' }}>
+          <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
+          <ListItemText primary="Cancel Policy" />
         </MenuItem>
       </Menu>
 

@@ -52,21 +52,39 @@ import {
 
 const drawerWidth = 264
 
-const NAV_ITEMS = [
-  { label: 'Dashboard', path: '/admin', icon: <DashboardIcon /> },
-  { label: 'Policies', path: '/admin/policies', icon: <DescriptionIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'senior_agent', 'underwriter', 'read_only', 'claims_officer'] },
-  { label: 'Claims', path: '/admin/claims', icon: <AssignmentIcon />, roles: ['admin', 'organization_admin', 'claims_officer', 'underwriter', 'broker', 'read_only'] },
-  { label: 'Commissions', path: '/admin/commissions', icon: <PaymentsIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'senior_agent', 'team_lead'] },
-  { label: 'Products', path: '/admin/products', icon: <ProductIcon />, roles: ['admin', 'organization_admin', 'underwriter'] },
-  { label: 'Policy Ledger', path: '/admin/ledger', icon: <PaymentsIcon />, roles: ['admin', 'organization_admin'] },
-  { label: 'Clients', path: '/admin/clients', icon: <PersonIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'senior_agent', 'underwriter'] },
-]
-
-const SECONDARY_NAV = [
-  { label: 'Team', path: '/admin/team', icon: <AccountCircleIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
-  { label: 'KYC Verification', path: '/admin/kyc', icon: <SecurityIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
-  { label: 'Promotions', path: '/admin/promotions', icon: <PromotionIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
-  { label: 'Settings', path: '/admin/settings', icon: <SettingsIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
+const MENU_SECTIONS = [
+  {
+    title: 'Operations',
+    items: [
+      { label: 'Dashboard', path: '/admin', icon: <DashboardIcon /> },
+      { label: 'Policies', path: '/admin/policies', icon: <DescriptionIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent', 'team_lead', 'claims_officer', 'read_only'] },
+      { label: 'Claims', path: '/admin/claims', icon: <AssignmentIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent', 'team_lead', 'claims_officer'] },
+      { label: 'Policy Ledger', path: '/admin/ledger', icon: <PaymentsIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent'] },
+    ]
+  },
+  {
+    title: 'Business & Growth',
+    items: [
+      { label: 'Products', path: '/admin/products', icon: <ProductIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent'] },
+      { label: 'Commissions', path: '/admin/commissions', icon: <PaymentsIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent', 'team_lead'] },
+      { label: 'Promotions', path: '/admin/promotions', icon: <PromotionIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent'] },
+    ]
+  },
+  {
+    title: 'Relationships',
+    items: [
+      { label: 'Clients', path: '/admin/clients', icon: <PersonIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent', 'team_lead'] },
+      { label: 'My Network', path: '/admin/my-network', icon: <PersonIcon />, roles: ['agent', 'broker', 'senior_agent', 'team_lead'] },
+    ]
+  },
+  {
+    title: 'Administration',
+    items: [
+      { label: 'Team', path: '/admin/team', icon: <AccountCircleIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
+      { label: 'KYC Verification', path: '/admin/kyc', icon: <SecurityIcon />, roles: ['admin', 'organization_admin', 'platform_admin'] },
+      { label: 'Settings', path: '/admin/settings', icon: <SettingsIcon />, roles: ['admin', 'organization_admin', 'agent', 'broker', 'underwriter', 'senior_agent', 'platform_admin'] },
+    ]
+  }
 ]
 
 function NotificationDot({ color = '#EA4335' }) {
@@ -126,7 +144,11 @@ export default function Layout({ children }) {
     : 'U'
 
   const DrawerContent = () => (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#FFFFFF' }}>
+    <Box sx={{
+      display: 'flex', flexDirection: 'column', height: '100%',
+      bgcolor: '#F8F9FE', // Match the admin panel background
+      borderRight: '1px solid #E8EAED'
+    }}>
       {/* Brand */}
       <Box sx={{
         px: 3, py: 2.5,
@@ -136,7 +158,7 @@ export default function Layout({ children }) {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box sx={{
             width: 36, height: 36, borderRadius: 0,
-            bgcolor: user?.logo ? 'transparent' : '#000', 
+            bgcolor: user?.logo ? 'transparent' : '#000',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: user?.logo ? 'none' : '0 2px 8px rgba(0,0,0,0.2)',
             overflow: 'hidden',
@@ -151,10 +173,10 @@ export default function Layout({ children }) {
           </Box>
           <Box sx={{ flexGrow: 1, minWidth: 0 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Typography sx={{ 
-                fontWeight: 700, fontSize: '0.92rem', color: '#202124', 
-                lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', 
-                whiteSpace: 'nowrap', maxWidth: user?.kyc_status === 'verified' ? 120 : 150 
+              <Typography sx={{
+                fontWeight: 700, fontSize: '0.92rem', color: '#202124',
+                lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap', maxWidth: user?.kyc_status === 'verified' ? 120 : 150
               }}>
                 {user?.organization_name || 'SHIELDS'}
               </Typography>
@@ -176,84 +198,61 @@ export default function Layout({ children }) {
         )}
       </Box>
 
-      {/* Main Nav */}
-      <Box sx={{ px: 1, pt: 2, flexGrow: 1 }}>
-        <Typography sx={{
-          px: 1.5, pb: 0.5, fontSize: '0.68rem', fontWeight: 700,
-          letterSpacing: '0.08em', color: '#9AA0A6', textTransform: 'uppercase',
-        }}>
-          Main Menu
-        </Typography>
-        <List disablePadding>
-          {NAV_ITEMS.filter(n => !n.roles || n.roles.includes(user?.role)).map((item) => {
-            const active = isActive(item.path)
-            return (
-              <ListItemButton
-                key={item.path}
-                selected={active}
-                onClick={() => { navigate(item.path); setMobileOpen(false) }}
-                sx={{
-                  mb: 0.5,
-                  '& .MuiListItemIcon-root': {
-                    color: active ? 'primary.main' : '#5F6368',
-                    minWidth: 40,
-                    '& svg': { fontSize: 20 },
-                  },
-                }}
-              >
-                <ListItemIcon>{item.icon}</ListItemIcon>
-                <ListItemText
-                  primary={item.label}
-                  primaryTypographyProps={{
-                    fontSize: '0.875rem',
-                    fontWeight: active ? 700 : 500,
-                    color: active ? '#1A237E' : '#202124',
-                  }}
-                />
-                {active && <ChevronRightIcon sx={{ fontSize: 16, color: '#1A237E', opacity: 0.6 }} />}
-              </ListItemButton>
-            )
-          })}
-        </List>
+      {/* Structured Nav */}
+      <Box sx={{ px: 1, pt: 2, flexGrow: 1, overflowY: 'auto' }}>
+        {MENU_SECTIONS.map((section, idx) => {
+          const filteredItems = section.items.filter(item => !item.roles || item.roles.includes(user?.role))
+          if (filteredItems.length === 0) return null
 
-        <Divider sx={{ my: 2 }} />
-
-        <Typography sx={{
-          px: 1.5, pb: 0.5, fontSize: '0.68rem', fontWeight: 700,
-          letterSpacing: '0.08em', color: '#9AA0A6', textTransform: 'uppercase',
-        }}>
-          Administration
-        </Typography>
-        <List disablePadding>
-          {SECONDARY_NAV.filter(n => !n.roles || n.roles.includes(user?.role)).map((item) => {
-            const active = isActive(item.path)
-            return (
-              <ListItemButton
-                key={item.path}
-                selected={active}
-                onClick={() => { navigate(item.path); setMobileOpen(false) }}
-                sx={{
-                  mb: 0.5,
-                  '& .MuiListItemIcon-root': {
-                    color: active ? 'primary.main' : '#5F6368',
-                    minWidth: 40,
-                    '& svg': { fontSize: 20 },
-                  },
-                }}
-              >
-                <ListItemIcon>{item.icon}</ListItemIcon>
-                <ListItemText
-                  primary={item.label}
-                  primaryTypographyProps={{
-                    fontSize: '0.875rem',
-                    fontWeight: active ? 600 : 500,
-                    color: active ? 'primary.main' : '#202124',
-                  }}
-                />
-              </ListItemButton>
-            )
-          })}
-        </List>
+          return (
+            <Box key={section.title} sx={{ mb: 3 }}>
+              <Typography sx={{
+                px: 1.5, pb: 1, fontSize: '0.68rem', fontWeight: 800,
+                letterSpacing: '0.08em', color: '#9AA0A6', textTransform: 'uppercase',
+              }}>
+                {section.title}
+              </Typography>
+              <List disablePadding>
+                {filteredItems.map((item) => {
+                  const active = isActive(item.path)
+                  return (
+                    <ListItemButton
+                      key={item.path}
+                      selected={active}
+                      onClick={() => { navigate(item.path); setMobileOpen(false) }}
+                      sx={{
+                        mb: 0.5,
+                        mx: 0.5,
+                        borderRadius: 0,
+                        '& .MuiListItemIcon-root': {
+                          color: active ? 'primary.main' : '#5F6368',
+                          minWidth: 40,
+                          '& svg': { fontSize: 20 },
+                        },
+                        '&.Mui-selected': {
+                          bgcolor: 'rgba(26,115,232,0.08)',
+                          '&:hover': { bgcolor: 'rgba(26,115,232,0.12)' },
+                        }
+                      }}
+                    >
+                      <ListItemIcon>{item.icon}</ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        primaryTypographyProps={{
+                          fontSize: '0.85rem',
+                          fontWeight: active ? 700 : 500,
+                          color: active ? '#1A237E' : '#202124',
+                        }}
+                      />
+                      {active && <ChevronRightIcon sx={{ fontSize: 16, color: '#1A237E', opacity: 0.6 }} />}
+                    </ListItemButton>
+                  )
+                })}
+              </List>
+              {idx < MENU_SECTIONS.length - 1 && <Divider sx={{ mx: 1.5, mt: 2, opacity: 0.6 }} />}
+            </Box>
+          )
+        })}
       </Box>
 
       {/* User Profile Footer */}
@@ -309,7 +308,11 @@ export default function Layout({ children }) {
           ModalProps={{ keepMounted: true }}
           sx={{
             display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { width: drawerWidth, boxSizing: 'border-box' },
+            '& .MuiDrawer-paper': {
+              width: drawerWidth,
+              boxSizing: 'border-box',
+              bgcolor: '#F8F9FE',
+            },
           }}
         >
           <DrawerContent />
@@ -326,6 +329,8 @@ export default function Layout({ children }) {
               top: 0,
               height: '100vh',
               position: 'fixed',
+              bgcolor: '#F8F9FE',
+              borderRight: '1px solid #E8EAED',
             },
           }}
           open

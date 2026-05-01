@@ -25,21 +25,22 @@ const ProtectedRoute = ({ children, allowedRoles, bypassKyc = false }) => {
   if (!auth) return <LoadingScreen />
 
   const { user, loading } = auth
-  
+
   if (loading) return <LoadingScreen />
   if (!user) return <Navigate to="/login" replace />
-  
+
   // Role Check
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />
   }
 
-  // Mandatory KYC Check
+  // Mandatory KYC Check (Exempt platform admins and organizational staff)
   const isKycVerified = user.kyc_status === 'verified' || user.kyc_status === 'approved'
-  const isKycRestricted = user.role !== 'platform_admin' && !isKycVerified
+  const isStaff = ['agent', 'underwriter', 'broker', 'claims_officer', 'senior_agent', 'team_lead'].includes(user.role)
+  const isKycRestricted = user.role !== 'platform_admin' && !isStaff && !isKycVerified
   const isOnKycPage = path.includes('kyc')
   const isOnProfilePage = path.includes('profile')
-  
+
   if (isKycRestricted && !isOnKycPage && !isOnProfilePage && !bypassKyc) {
     const isClient = user.role === 'client' || user.role === 'user'
     const target = isClient ? '/client/kyc' : '/admin/kyc'

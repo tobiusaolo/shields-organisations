@@ -315,14 +315,7 @@ export default function Dashboard() {
               <MenuItem value="90d">Last 90 days</MenuItem>
             </Select>
           </FormControl>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigate('/policies')}
-            sx={{ borderRadius: 0, fontWeight: 700, px: 3, boxShadow: '0 4px 12px rgba(26,115,232,0.2)' }}
-          >
-            New Policy
-          </Button>
+
       </Box>
 
       {/* KPI Cards */}
