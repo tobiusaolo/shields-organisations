@@ -145,10 +145,18 @@ export default function ClientProducts() {
                     <Divider sx={{ mb: 2 }} />
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Box>
-                        <Typography variant="caption" sx={{ color: '#5F6368', fontWeight: 600 }}>Premium</Typography>
-                        <Typography sx={{ fontWeight: 800, color: '#202124', fontSize: '1.05rem' }}>
-                          UGX {Number(product.max_coverage || 0).toLocaleString()}
-                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#5F6368', fontWeight: 600, display: 'block', mb: 0.5 }}>Pricing Tiers ({product.tiers_count || 0})</Typography>
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                          {product.tier_names && product.tier_names.length > 0 ? (
+                            product.tier_names.map((tName, i) => (
+                              <Chip key={i} label={tName} size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, bgcolor: '#E8F0FE', color: '#1A73E8', borderRadius: 1 }} />
+                            ))
+                          ) : (
+                            <Typography variant="caption" sx={{ color: '#9AA0A6', fontStyle: 'italic' }}>
+                              {(product.tiers_count || 0) > 0 ? 'Names pending...' : 'Dynamic'}
+                            </Typography>
+                          )}
+                        </Box>
                       </Box>
                       <Stack direction="row" spacing={1}>
                         <Button size="small" variant="text" onClick={() => setPreview(product)}
@@ -194,30 +202,34 @@ export default function ClientProducts() {
 
             <Typography variant="body1" sx={{ color: '#5F6368', lineHeight: 1.8, mb: 3 }}>{preview.description}</Typography>
 
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={6}>
-                <Box sx={{ p: 2, bgcolor: '#E8F5E9', borderRadius: 0}}>
-                  <Typography variant="caption" sx={{ color: '#2E7D32', fontWeight: 800, display: 'block', mb: 0.5 }}>✓ WHAT'S COVERED</Typography>
-                  {['Hospitalization', 'Accidental death', 'Critical illness'].map(b => (
-                    <Typography key={b} variant="caption" sx={{ color: '#2E7D32', display: 'block', mb: 0.25 }}>{b}</Typography>
-                  ))}
-                </Box>
-              </Grid>
-              <Grid item xs={6}>
-                <Box sx={{ p: 2, bgcolor: '#FFF3E0', borderRadius: 0}}>
-                  <Typography variant="caption" sx={{ color: '#E65100', fontWeight: 800, display: 'block', mb: 0.5 }}>✗ EXCLUSIONS</Typography>
-                  {['Pre-existing (90 days)', 'Self-inflicted injuries', 'Extreme sports'].map(e => (
-                    <Typography key={e} variant="caption" sx={{ color: '#E65100', display: 'block', mb: 0.25 }}>{e}</Typography>
-                  ))}
-                </Box>
-              </Grid>
-            </Grid>
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="caption" sx={{ color: '#5F6368', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, mb: 2, display: 'block' }}>Available Tiers & Benefits</Typography>
+              <Stack spacing={2}>
+                {(preview.tiers || []).length > 0 ? preview.tiers.map((tier, idx) => (
+                  <Paper key={idx} elevation={0} sx={{ p: 2, border: '1px solid #E8EAED', bgcolor: '#F8F9FA', borderRadius: 0 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                      <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: '#1A237E' }}>{tier.name}</Typography>
+                      <Typography sx={{ fontWeight: 900, fontSize: '0.9rem', color: '#1E8E3E' }}>UGX {(tier.coverage_amount || 0).toLocaleString()}</Typography>
+                    </Box>
+                    <Typography variant="caption" sx={{ color: '#5F6368', display: 'block', mb: 1.5 }}>{tier.description}</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
+                      {(tier.benefits || []).map((benefit, bIdx) => (
+                        <Chip 
+                          key={bIdx} 
+                          label={benefit} 
+                          size="small" 
+                          sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, bgcolor: '#E8F0FE', color: '#1A73E8', borderRadius: 1 }} 
+                        />
+                      ))}
+                    </Box>
+                  </Paper>
+                )) : (
+                  <Typography variant="body2" sx={{ color: '#9AA0A6', fontStyle: 'italic' }}>No tiered pricing defined. Enrollment is based on dynamic assessment.</Typography>
+                )}
+              </Stack>
+            </Box>
 
-            <Box sx={{ p: 2.5, bgcolor: '#F8F9FA', borderRadius: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box>
-                <Typography variant="caption" sx={{ color: '#5F6368', fontWeight: 600 }}>Premium</Typography>
-                <Typography variant="h5" sx={{ fontWeight: 800, color: '#202124' }}>UGX {Number(preview.max_coverage || 0).toLocaleString()}</Typography>
-              </Box>
+            <Box sx={{ mt: 4, pt: 2, display: 'flex', justifyContent: 'flex-end' }}>
               <Button variant="contained" onClick={() => { setPreview(null); navigate(`/client/products/${preview.id}`) }}
                 sx={{ bgcolor: '#1A237E', borderRadius: 0, fontWeight: 700, px: 3, boxShadow: 'none', '&:hover': { bgcolor: '#0d1b6e', boxShadow: 'none' } }}>
                 Get a Quote →

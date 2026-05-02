@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productAPI, formAPI, commissionAPI } from '../services/api'
 import { formatCurrency } from '../utils/formatters'
 import { useAuth } from '../context/AuthContext'
+import Swal from 'sweetalert2'
 import {
   Box,
   Typography,
@@ -137,15 +138,14 @@ export default function Products() {
     description: '',
     image_base64: '',
     pricingModel: 'classes', // 'classes' or 'formula'
-    limits: { min: 0, max: 100000000 },
     terms: '',
-    basePremium: 10000,
+    basePremium: 0,
     formula: 'amount * 0.05',
     pricingTiers: [
-      { name: 'Bronze', description: 'Basic Coverage', coverage_amount: 1000000, premium: 5000, benefits: ['Standard support'] }
+      { name: 'Bronze', description: 'Basic Coverage', coverage_amount: 1000000, premium: 10000, benefits: ['Standard support'] }
     ],
     duration_years: '1',
-    pricing_frequency: 'monthly',
+    pricing_frequency: 'annual',
     commissions: [
       { role_code: 'agent', commission_type: 'percentage', commission_value: 10 }
     ],
@@ -189,10 +189,10 @@ export default function Products() {
     mutationFn: (productId) => productAPI.deleteProduct(orgId, productId),
     onSuccess: () => {
       queryClient.invalidateQueries(['products', orgId])
-      alert('Product deleted successfully.')
+      Swal.fire('Deleted!', 'Product deleted successfully.', 'success')
     },
     onError: (err) => {
-      alert(`Delete failed: ${err.response?.data?.detail || 'Unknown error'}`)
+      Swal.fire('Error!', `Delete failed: ${err.response?.data?.detail || 'Unknown error'}`, 'error')
     }
   })
 
@@ -209,7 +209,7 @@ export default function Products() {
           category: data.category,
           description: data.description,
           image_base64: data.image_base64,
-          max_coverage: parseFloat(data.limits.max),
+          max_coverage: 0,
           base_premium: parseFloat(data.basePremium),
           duration_years: data.duration_years ? parseInt(data.duration_years) : null,
           documents: data.documents
@@ -225,7 +225,7 @@ export default function Products() {
             description: data.description || '',
             terms_and_conditions: data.terms || 'Standard terms apply',
             subscription_forms: data.documents || [],
-            coverage_limits: data.limits || { min: 0, max: 0 },
+            coverage_limits: { min: 0, max: 0 },
             pricing_frequency: data.pricing_frequency
           })
 
@@ -245,7 +245,7 @@ export default function Products() {
           description: data.description,
           image_base64: data.image_base64,
           is_active: true,
-          max_coverage: parseFloat(data.limits.max),
+          max_coverage: 0,
           base_premium: parseFloat(data.basePremium),
           duration_years: data.duration_years ? parseInt(data.duration_years) : null,
           documents: data.documents
@@ -259,8 +259,8 @@ export default function Products() {
           description: data.description || '',
           terms_and_conditions: data.terms || 'Standard terms apply',
           subscription_forms: data.documents || [],
-          coverage_limits: data.limits || { min: 0, max: 0 },
-            pricing_frequency: data.pricing_frequency,
+          coverage_limits: { min: 0, max: 0 },
+          pricing_frequency: data.pricing_frequency,
           effective_from: new Date().toISOString().split('T')[0]
         })
         templateId = templateRes.data.id
@@ -349,7 +349,6 @@ export default function Products() {
       description: '',
       image_base64: '',
       pricingModel: 'classes',
-      limits: { min: 0, max: 100000000 },
       terms: '',
       basePremium: 10000,
       formula: 'amount * 0.05',
@@ -394,7 +393,6 @@ export default function Products() {
           description: product.description,
           image_base64: product.image_base64,
           pricingModel: tiers.length > 0 ? 'classes' : 'formula',
-          limits: template.coverage_limits || { min: 0, max: 100000000 },
           terms: template.terms_and_conditions,
           basePremium: product.base_premium,
           formula: 'amount * 0.05', // Default if not found
@@ -411,6 +409,7 @@ export default function Products() {
             commission_type: c.commission_type,
             commission_value: c.commission_value
           })),
+          pricing_frequency: template.pricing_frequency || 'annual',
           documents: template.subscription_forms || [],
           dynamicForms: forms.map(f => ({
             name: f.name,
@@ -439,9 +438,19 @@ export default function Products() {
   }
 
   const handleDeleteProduct = (productId) => {
-    if (window.confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
-      deleteProductMutation.mutate(productId)
-    }
+    Swal.fire({
+      title: 'Are you sure?',
+      text: "You want to delete this product? This action cannot be undone.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        deleteProductMutation.mutate(productId)
+      }
+    })
   }
 
   const handleNext = () => setActiveStep(prev => prev + 1)
@@ -492,16 +501,19 @@ export default function Products() {
                       {CATEGORIES.map(c => <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>)}
                     </TextField>
                   </Grid>
-                  <Grid item xs={12} sm={4}>
+                  <Grid item xs={12} sm={3}>
                     <TextField label="Duration (Years)" type="number" fullWidth value={formData.duration_years} onChange={(e) => setFormData({ ...formData, duration_years: e.target.value })} InputProps={{ inputProps: { min: 1, max: 100 } }} />
                   </Grid>
-                  <Grid item xs={12} sm={4}>
+                  <Grid item xs={12} sm={3}>
                     <TextField select label="Payment Frequency" fullWidth value={formData.pricing_frequency} onChange={(e) => setFormData({ ...formData, pricing_frequency: e.target.value })}>
                       <MenuItem value="monthly">Monthly</MenuItem>
                       <MenuItem value="quarterly">Quarterly</MenuItem>
                       <MenuItem value="bi-annually">Bi-Annually</MenuItem>
                       <MenuItem value="annual">Annually</MenuItem>
                     </TextField>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField label="Base Premium (UGX)" type="number" fullWidth value={formData.basePremium} onChange={(e) => setFormData({ ...formData, basePremium: parseFloat(e.target.value) || 0 })} InputProps={{ startAdornment: <Typography sx={{ mr: 1, color: '#5F6368', fontSize: 13 }}>UGX</Typography> }} />
                   </Grid>
                 </Grid>
               </Box>
@@ -546,7 +558,7 @@ export default function Products() {
                       <Box sx={{ p:2, display:'flex', flexDirection:'column', gap:2 }}>
                         <TextField label="Description" size="small" fullWidth value={tier.description} onChange={e => upTier(idx,'description',e.target.value)} placeholder="What does this tier cover?" />
                         <Box sx={{ display:'flex', gap:2 }}>
-                          <TextField label="Premium (UGX)" size="small" fullWidth type="number" value={tier.coverage_amount} onChange={e => upTier(idx,'coverage_amount',parseFloat(e.target.value)||0)} InputProps={{ startAdornment:<Typography sx={{mr:1,color:'#5F6368',fontSize:13}}>UGX</Typography> }}/>
+                          <TextField label="Premium / Coverage Amount" size="small" fullWidth type="number" value={tier.coverage_amount} onChange={e => upTier(idx,'coverage_amount',parseFloat(e.target.value)||0)} InputProps={{ startAdornment:<Typography sx={{mr:1,color:'#5F6368',fontSize:13}}>UGX</Typography> }}/>
                         </Box>
                         <Box>
                           <Typography variant="caption" sx={{ fontWeight:700, color:'#5F6368', mb:0.5, display:'block' }}>BENEFITS</Typography>
@@ -567,7 +579,7 @@ export default function Products() {
               <Box sx={{ display:'flex', flexDirection:'column', gap:2 }}>
                 <Alert severity="info">Write a formula using variables like <strong>sum_insured</strong>, <strong>age</strong>, <strong>duration</strong>. The system evaluates it at quote time.</Alert>
                 <TextField label="Pricing Formula" fullWidth multiline rows={3} value={formData.formula} onChange={e => setFormData({...formData, formula:e.target.value})} placeholder="e.g.  sum_insured * 0.05 * (age / 30)" sx={{ fontFamily:'monospace' }}/>
-                <TextField label="Premium (UGX)" type="number" fullWidth value={formData.limits.max} onChange={e => setFormData({...formData, limits:{...formData.limits, max:parseFloat(e.target.value)||0}})} />
+                <TextField label="Premium (UGX)" type="number" fullWidth value={formData.basePremium} onChange={e => setFormData({...formData, basePremium:parseFloat(e.target.value)||0})} />
               </Box>
             )}
           </Box>
@@ -784,7 +796,7 @@ export default function Products() {
 
               { title:'Pricing Model', color:'#0F9D58', items: formData.pricingModel==='classes'
                 ? formData.pricingTiers.map(t=>({label:t.name, value:`Premium: UGX ${t.coverage_amount?.toLocaleString()}`}))
-                : [{label:'Formula', value:formData.formula},{label:'Premium', value:`UGX ${formData.limits.max?.toLocaleString()}`}]
+                : [{label:'Formula', value:formData.formula},{label:'Premium', value:`UGX ${formData.basePremium?.toLocaleString()}`}]
               },
               { title:'Commissions', color:'#F4B400', items: formData.commissions.length ? formData.commissions.map(c=>({label:SYSTEM_ROLES.find(r=>r.value===c.role_code)?.label||c.role_code, value:`${c.commission_value}${c.commission_type==='percentage'?'%':' UGX (flat)'}`})) : [{label:'', value:'No commissions configured'}]},
               { title:'Compliance Forms', color:'#9C27B0', items: formData.dynamicForms.length ? formData.dynamicForms.map(f=>({label:f.name||'Unnamed Form', value:`${f.fields.length} fields · ${f.is_required?'Required':'Optional'}`})) : [{label:'', value:'No forms added'}]},
@@ -938,12 +950,17 @@ export default function Products() {
                   }}>
                     {product.description || "No description provided for this product template."}
                   </Typography>
-                  <Box sx={{ display: "flex", gap: 2, mb: 1 }}>
-                    <Box>
-                      <Typography variant="caption" sx={{ fontWeight: 800, color: "#1A237E", display: "block" }}>PREMIUM</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{formatCurrency(product.max_coverage)}</Typography>
-
-                    </Box>
+                  <Box sx={{ display: "flex", gap: 1, mb: 1, alignItems: "center", flexWrap: "wrap" }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: "#1A237E" }}>TIERS ({product.tiers_count || 0}):</Typography>
+                    {product.tier_names && product.tier_names.length > 0 ? (
+                      product.tier_names.map((tName, i) => (
+                        <Chip key={i} label={tName} size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, bgcolor: '#E8F0FE', color: '#1A73E8' }} />
+                      ))
+                    ) : (
+                      <Typography variant="caption" sx={{ color: '#9AA0A6', fontStyle: 'italic' }}>
+                        {(product.tiers_count || 0) > 0 ? 'Names pending...' : 'Dynamic Pricing'}
+                      </Typography>
+                    )}
                   </Box>
                 </CardContent>
                 <Divider />
@@ -953,7 +970,7 @@ export default function Products() {
                   <IconButton color="primary" size="small" onClick={() => handleEditProduct(product)} disabled={isHierarchyLoading}>
                     <EditIcon />
                   </IconButton>
-                  <IconButton color="error" size="small" onClick={() => handleDeleteProduct(product.id)} disabled={deleteProductMutation.isPending}>
+                  <IconButton color="error" size="small" onClick={() => handleDeleteProduct(product.id)}>
                     <DeleteIcon />
                   </IconButton>
                 </CardActions>
@@ -996,6 +1013,14 @@ export default function Products() {
                       </Typography>
                     </Box>
                   </Box>
+                  <Box sx={{ textAlign: 'right' }}>
+                    <Typography sx={{ fontSize: '0.65rem', opacity: 0.8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1 }}>Maximum Coverage</Typography>
+                    <Typography sx={{ fontSize: '1.4rem', fontWeight: 950 }}>
+                      { (hierarchy?.[0]?.tiers?.length > 0) 
+                        ? formatCurrency(Math.max(...hierarchy[0].tiers.map(t => t.coverage_amount)))
+                        : formatCurrency(prod.max_coverage || 0) }
+                    </Typography>
+                  </Box>
                   <IconButton onClick={() => setInspectorOpen(false)} sx={{ color: 'rgba(255,255,255,0.8)', p: 0.5 }}>
                     <CloseIcon fontSize="small" />
                   </IconButton>
@@ -1003,10 +1028,14 @@ export default function Products() {
                 {/* Quick Stat Row */}
                 <Box sx={{ display: 'flex', gap: 3, mt: 2.5, pt: 2, borderTop: '1px solid rgba(255,255,255,0.15)' }}>
                   {[
-                    { label: 'Premium', value: formatCurrency(prod.base_premium) },
-                    { label: 'Max Coverage', value: formatCurrency(prod.max_coverage) },
+                    { 
+                      label: 'Premium Amount', 
+                      value: (hierarchy?.[0]?.tiers?.length > 0) 
+                        ? formatCurrency(Math.max(...hierarchy[0].tiers.map(t => t.coverage_amount)))
+                        : formatCurrency(prod.max_coverage || 0) 
+                    },
+                    { label: 'Tiers', value: `${prod.tiers_count || 0}` },
                     { label: 'Policy Period', value: `${prod.duration_years || 1}yr` },
-                    { label: 'Billing', value: (mainTemplate?.pricing_frequency || 'Annual').toUpperCase() },
                   ].map((s, i) => (
                     <Box key={i}>
                       <Typography sx={{ fontSize: '0.63rem', opacity: 0.6, fontWeight: 700, textTransform: 'uppercase', mb: 0.2 }}>{s.label}</Typography>
@@ -1060,7 +1089,7 @@ export default function Products() {
                                       <Box sx={{ width: 10, height: 10, borderRadius: 0, bgcolor: tc }} />
                                       <Typography sx={{ fontWeight: 800, fontSize: '0.88rem', color: '#202124' }}>{tier.name}</Typography>
                                     </Box>
-                                    <Typography sx={{ fontWeight: 900, fontSize: '0.88rem', color: tc }}>{formatCurrency(tier.premium)}</Typography>
+                                    <Typography sx={{ fontWeight: 900, fontSize: '0.88rem', color: tc }}>{formatCurrency(tier.coverage_amount)}</Typography>
                                   </Box>
                                   {tier.description && <Typography sx={{ fontSize: '0.75rem', color: '#5F6368', mb: 1 }}>{tier.description}</Typography>}
                                   {tier.benefits?.filter(Boolean).length > 0 && (
@@ -1102,13 +1131,27 @@ export default function Products() {
                         <Typography sx={{ fontWeight: 700, fontSize: '0.78rem', color: '#5F6368', mb: 1.5 }}>{item.template.name}</Typography>
                         {(item.tiers || []).length > 0 ? item.tiers.map(tier => (
                           <Paper key={tier.id} sx={{ p: 2.5, mb: 1.5, borderRadius: 0, border: '1px solid #E8EAED', bgcolor: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Box>
+                            <Box sx={{ flex: 1 }}>
                               <Typography sx={{ fontWeight: 800, fontSize: '0.9rem' }}>{tier.name}</Typography>
                               <Typography sx={{ fontSize: '0.78rem', color: '#5F6368', mt: 0.3 }}>{tier.description || 'Standard tier'}</Typography>
+                              
+                              {tier.benefits && tier.benefits.length > 0 && (
+                                <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
+                                  {tier.benefits.map((benefit, bIdx) => (
+                                    <Chip 
+                                      key={bIdx} 
+                                      label={benefit} 
+                                      size="small" 
+                                      variant="outlined"
+                                      sx={{ height: 22, fontSize: '0.65rem', fontWeight: 700, borderColor: '#E8EAED', color: '#1A73E8', bgcolor: '#f1f8ff' }} 
+                                    />
+                                  ))}
+                                </Box>
+                              )}
                             </Box>
-                            <Box sx={{ textAlign: 'right' }}>
-                              <Typography sx={{ fontWeight: 900, fontSize: '1rem', color: '#1E8E3E' }}>{formatCurrency(tier.premium)}</Typography>
-                              <Typography sx={{ fontSize: '0.7rem', color: '#9AA0A6' }}>Coverage: {formatCurrency(tier.coverage_amount)}</Typography>
+                            <Box sx={{ textAlign: 'right', ml: 2 }}>
+                              <Typography sx={{ fontWeight: 900, fontSize: '1rem', color: '#1E8E3E' }}>{formatCurrency(tier.coverage_amount)}</Typography>
+                              <Typography sx={{ fontSize: '0.7rem', color: '#9AA0A6' }}>Premium Amount</Typography>
                             </Box>
                           </Paper>
                         )) : (

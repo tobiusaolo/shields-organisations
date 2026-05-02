@@ -198,37 +198,44 @@ export default function AgentEnrollment() {
   const [paymentStatus, setPaymentStatus] = useState('idle')
   const [paymentError, setPaymentError] = useState(null)
   const [isCreatingQuote, setIsCreatingQuote] = useState(false)
-  const [monthsToPay, setMonthsToPay] = useState(1) // For monthly products: how many installments to pay upfront
   const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [pesapalUrl, setPesapalUrl] = useState(null)
 
 // 1. Fetch Clients (Merging Organization & Personal Network)
-  const { data: clients = [], isLoading: clientsLoading } = useQuery({
+  const { data: clients = [], isLoading: clientsLoading, refetch: refetchClients } = useQuery({
     queryKey: ['agent-enrollment-clients', user?.organization_id],
     queryFn: async () => {
       const orgId = user?.organization_id || user?.default_organization_id
       if (!orgId) return []
       
-      try {
-        const [orgRes, myRes] = await Promise.all([
-          tenancyAPI.getOrganizationClients(orgId),
-          tenancyAPI.getMyClients()
-        ])
-        
-        const orgClients = orgRes.data?.items || orgRes.data || []
-        const myClients = myRes.data?.items || myRes.data || []
-        
-        // Merge and deduplicate by ID or Email
-        const allClients = [...orgClients, ...myClients]
-        const uniqueClients = Array.from(new Map(allClients.map(c => [c.id, c])).values())
-        
-        console.log('Final Merged Clients:', uniqueClients)
-        return uniqueClients
-      } catch (err) {
-        console.error('Error fetching enrollment clients:', err)
-        return []
+      // Attempt sequential fetching if parallel fails or is slow
+      const fetchClientsResiliently = async () => {
+        try {
+          // Attempt organization clients
+          const orgRes = await tenancyAPI.getOrganizationClients(orgId)
+          const orgClients = orgRes.data?.items || orgRes.data || []
+          
+          // Attempt personal clients
+          const myRes = await tenancyAPI.getMyClients()
+          const myClients = myRes.data?.items || myRes.data || []
+          
+          return [...orgClients, ...myClients]
+        } catch (err) {
+          console.warn('One or more client fetch operations failed, falling back to partial data:', err)
+          // Return whatever we have if one fails
+          return []
+        }
       }
+
+      const allClients = await fetchClientsResiliently()
+      const uniqueClients = Array.from(new Map(allClients.map(c => [c.id, c])).values())
+      
+      console.log('Final Merged Clients:', uniqueClients)
+      return uniqueClients
     },
-    enabled: !!user
+    enabled: !!user,
+    retry: 2,
+    retryDelay: 3000
   })
 
   
@@ -342,16 +349,23 @@ const handleFileUpload = (docType, file) => {
     queryKey: ['pricing-tiers', id, activeTemplate?.id],
     queryFn: async () => {
       const res = await publicAPI.getPricingTiersPublic(product.organization_id, activeTemplate.id)
-      const items = res.data?.items || res.data || []
-      // Mirror organization side: map fields exactly
-      return items.map(t => ({
-        id: t.id,
-        name: t.name,
-        description: t.description,
-        coverage_amount: t.coverage_amount,
-        premium: t.premium,
-        benefits: t.benefits || []
-      }))
+      const rawItems = res.data?.items || res.data || []
+      // Deduplicate by tier ID to fix identical cards issue without hiding tiers that share the same name
+      const uniqueMap = new Map()
+      rawItems.forEach(t => {
+        if (!uniqueMap.has(t.id)) {
+          uniqueMap.set(t.id, {
+            id: t.id,
+            name: t.name,
+            description: t.description,
+            coverage_amount: t.coverage_amount,
+            premium: t.premium,
+            benefits: t.benefits || [],
+            product_template_id: t.product_template_id
+          })
+        }
+      })
+      return Array.from(uniqueMap.values())
     },
     enabled: !!id && !!activeTemplate?.id && !!product?.organization_id
   })
@@ -361,7 +375,7 @@ const handleFileUpload = (docType, file) => {
     setSelectedTier(tier)
     setFormData(prev => ({
       ...prev,
-      premium: tier.premium || 0,
+      premium: tier.coverage_amount || 0,
       coverageAmount: tier.coverage_amount || prev.coverageAmount
     }))
   }
@@ -416,12 +430,7 @@ const handleFileUpload = (docType, file) => {
     }
   }, [dynamicForms])
   
-  // Sync coverage amount with product max_coverage if available
-  React.useEffect(() => {
-    if (product?.max_coverage && !formData.coverageAmount) {
-      setFormData(prev => ({ ...prev, coverageAmount: product.max_coverage }))
-    }
-  }, [product])
+  // Removed max_coverage sync
 
   // Mutation for creating quotation (calls real backend)
   const createQuote = useMutation({
@@ -503,7 +512,7 @@ const handleFileUpload = (docType, file) => {
         product_template_id: activeTemplate?.id || '',
         start_date: formData.startDate,
         end_date: new Date(new Date(formData.startDate).setFullYear(new Date(formData.startDate).getFullYear() + (Number(product?.duration_years) || 1))).toISOString().split('T')[0],
-        coverage_amount: Number(formData.coverageAmount) || product?.max_coverage || 0,
+        coverage_amount: Number(formData.coverageAmount) || 0,
         context: enrichedContext,
         productId: product?.id
       })
@@ -585,11 +594,32 @@ const handleFileUpload = (docType, file) => {
       // 1. Make sure the policy is saved as a draft first
       await performSave()
 
+      const freq = activeTemplate?.pricing_frequency?.toLowerCase() || 'annual'
+      // Resolve premium: tier premium > formData > template base > product base
+      const paymentAmount = Number(
+        formData.premium ||
+        selectedTier?.premium ||
+        selectedTier?.base_premium ||
+        activeTemplate?.base_premium ||
+        product?.base_premium ||
+        0
+      )
+      const monthsPaid = freq === 'annual' || freq === 'annually' ? ((product.duration_years || 1) * 12) : 1
+
+      if (!paymentAmount || paymentAmount <= 0) {
+        throw new Error('Could not determine a valid payment amount. Please contact support.')
+      }
+
       // 2. Initiate Payment for the policy (using the active policy ID, NOT the quote ID)
       if (createdPolicyId) {
-        const res = await publicAPI.initiatePesapalPayment(product.organization_id, createdPolicyId, { months_paid: monthsToPay })
-        // Redirect to Pesapal
-        window.location.href = res.data.redirect_url
+        console.log(`[PesaPal] Agent flow → orgId=${product.organization_id}, policyId=${createdPolicyId}, amount=${paymentAmount}, months=${monthsPaid}`)
+        const res = await publicAPI.initiatePesapalPayment(product.organization_id, createdPolicyId, { months_paid: monthsPaid, amount: paymentAmount })
+        // Redirect to PesaPal Predefined UI immediately
+        if (res.data?.redirect_url) {
+            window.location.href = res.data.redirect_url
+        } else {
+            throw new Error("No redirect URL received from PesaPal.")
+        }
       } else {
         throw new Error("Policy creation failed before payment.")
       }
@@ -665,7 +695,7 @@ const handleFileUpload = (docType, file) => {
         product_template_id: activeTemplate?.id || '',
         start_date: formData.startDate,
         end_date: new Date(new Date(formData.startDate).setFullYear(new Date(formData.startDate).getFullYear() + (Number(product.duration_years) || 1))).toISOString().split('T')[0],
-        coverage_amount: Number(formData.coverageAmount) || product.max_coverage || 0,
+        coverage_amount: Number(formData.coverageAmount) || 0,
         premium_amount: Number(formData.premium) || activeTemplate?.base_premium || 0,
         context: {
           ...enrichedContext,
@@ -675,6 +705,9 @@ const handleFileUpload = (docType, file) => {
         productName: product.name,
         provider: product.provider_name
       })
+    } else if (activeStep === 3) {
+      // Step 3 is Review. Clicking "Continue" moves to Step 4 (Payment Prompt)
+      setActiveStep(4)
     } else if (activeStep === 4) {
       handleCompletePayment()
     } else {
@@ -919,22 +952,14 @@ const handleFileUpload = (docType, file) => {
                               </Typography>
                               <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 1 }}>
                                 <Typography variant="h5" sx={{ fontWeight: 900, color: '#202124' }}>
-                                  UGX {Number(tier.premium || tier.coverage_amount || 0).toLocaleString()}
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: '#70757A', ml: 1, fontWeight: 600 }}>
-                                  / {activeTemplate?.pricing_frequency || 'period'}
+                                  UGX {Number(tier.coverage_amount || 0).toLocaleString()}
                                 </Typography>
                               </Box>
                               <Typography variant="body2" sx={{ color: '#5F6368', mb: 2.5, minHeight: 40, fontSize: '0.85rem', lineHeight: 1.5 }}>
                                 {tier.description || `Comprehensive ${tier.name} package.`}
                               </Typography>
                               
-                              <Divider sx={{ mb: 2, borderStyle: 'dashed' }} />
-                              
-                              <Typography variant="caption" sx={{ fontWeight: 700, color: '#202124', mb: 1.5, display: 'block' }}>COVERAGE LIMIT</Typography>
-                              <Typography variant="body2" sx={{ fontWeight: 800, color: '#3C4043', mb: 2 }}>
-                                UGX {Number(tier.coverage_amount).toLocaleString()}
-                              </Typography>
+                              {/* Removed redundant Coverage Limit row */}
                               
                               <Typography variant="caption" sx={{ fontWeight: 700, color: '#202124', mb: 1.5, display: 'block' }}>INCLUDED BENEFITS</Typography>
                               <List sx={{ p: 0 }}>
@@ -952,39 +977,7 @@ const handleFileUpload = (docType, file) => {
                     </Box>
                   )}
 
-                  {/* Benefits & Coverage Limits */}
-                  <Paper elevation={0} sx={{ p: 4, borderRadius: 3, border: '1px solid #E8EAED', mb: 4, bgcolor: '#fff' }}>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2.5 }}>
-                      <ShieldIcon sx={{ color: '#1A73E8', fontSize: 20 }} />
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1A73E8', textTransform: 'uppercase', letterSpacing: 0.5 }}>Full Product Benefits & Limits</Typography>
-                    </Stack>
-
-                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#70757A', mb: 1.5, display: 'block', textTransform: 'uppercase' }}>Standard Coverage Limits</Typography>
-                    {activeTemplate?.coverage_limits && Object.keys(activeTemplate.coverage_limits).length > 0 ? (
-                      <Grid container spacing={2}>
-                        {Object.entries(activeTemplate.coverage_limits).map(([key, val]) => (
-                          <Grid item xs={12} md={6} key={key}>
-                            <Box sx={{ 
-                              p: 2, bgcolor: '#F8F9FA', border: '1px solid #E8EAED', 
-                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                              transition: 'all 0.2s', '&:hover': { bgcolor: '#fff', borderColor: '#1A73E8' }
-                            }}>
-                              <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#5F6368', textTransform: 'capitalize' }}>
-                                {key.replace(/_/g, ' ')}
-                              </Typography>
-                              <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, color: '#202124' }}>
-                                {typeof val === 'number' ? `UGX ${val.toLocaleString()}` : val}
-                              </Typography>
-                            </Box>
-                          </Grid>
-                        ))}
-                      </Grid>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: '#70757A', fontStyle: 'italic' }}>
-                        Comprehensive coverage benefits as per the standard plan class. Detailed limits will be provided in your policy document.
-                      </Typography>
-                    )}
-                  </Paper>
+                  {/* Removed Full Product Benefits & Limits block as per user request */}
                 </Box>
               )}
 
@@ -1144,55 +1137,17 @@ const handleFileUpload = (docType, file) => {
                               <Typography variant="body2" sx={{ color: '#5F6368' }}>Policy Term</Typography>
                               <Typography variant="body2" sx={{ fontWeight: 700 }}>{product.duration_years || 1} Year(s)</Typography>
                             </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <Typography variant="body2" sx={{ color: '#5F6368' }}>Coverage Limit</Typography>
-                              <Typography variant="body2" sx={{ fontWeight: 700 }}>UGX {Number(product.max_coverage || createdQuote?.coverage_amount || 0).toLocaleString()}</Typography>
-                            </Box>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 1, borderTop: '1px solid #E8EAED' }}>
-                              {(activeTemplate?.pricing_frequency?.toLowerCase() === 'monthly' || activeTemplate?.pricing_frequency?.toLowerCase() === 'month') ? (
-                                <>
-                                  <Typography variant="body2" sx={{ color: '#5F6368' }}>Monthly Installment</Typography>
-                                  <Typography variant="body2" sx={{ fontWeight: 800, color: '#1A73E8' }}>
-                                    UGX {(
-                                      (activeTemplate?.pricing_frequency?.toLowerCase() === 'monthly' || activeTemplate?.pricing_frequency?.toLowerCase() === 'month') 
-                                      ? Number(formData.premium || activeTemplate?.base_premium || product?.base_premium || 0)
-                                      : Math.ceil(Number(formData.premium || activeTemplate?.base_premium || product?.base_premium || product?.max_coverage || 0) / 12)
-                                    ).toLocaleString()} / month
-                                  </Typography>
-                                </>
-                              ) : (
-                                <>
-                                  <Typography variant="body2" sx={{ color: '#5F6368' }}>Amount Due</Typography>
-                                  <Typography variant="body2" sx={{ fontWeight: 800, color: '#0F9D58' }}>
-                                    UGX {Number(formData.premium || activeTemplate?.base_premium || product?.base_premium || product?.max_coverage || 0).toLocaleString()}
-                                  </Typography>
-                                </>
-                              )}
+                              <Typography variant="body2" sx={{ color: '#5F6368' }}>Premium Amount</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 800, color: '#0F9D58' }}>
+                                UGX {Number(formData.premium || activeTemplate?.base_premium || product?.base_premium || 0).toLocaleString()}
+                              </Typography>
                             </Box>
                           </Stack>
                         </Box>
 
                         {/* Months Selector for Monthly Products */}
-                        {(activeTemplate?.pricing_frequency?.toLowerCase() === 'monthly' || activeTemplate?.pricing_frequency?.toLowerCase() === 'month') && (
-                          <Box sx={{ mt: 3, p: 3, bgcolor: '#fff', borderRadius: 3, border: '1px solid #1A73E8' }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, color: '#1A73E8' }}>PAYMENT SCHEDULE</Typography>
-                            <Typography variant="body2" sx={{ color: '#5F6368', mb: 2 }}>
-                              How many months would you like to pay for upfront?
-                            </Typography>
-                            <TextField
-                              select
-                              fullWidth
-                              value={monthsToPay}
-                              onChange={(e) => setMonthsToPay(e.target.value)}
-                              InputProps={{ sx: { borderRadius: 3 } }}
-                              SelectProps={{ native: true }}
-                            >
-                              {[1, 2, 3, 4, 6, 12].map(m => (
-                                <option key={m} value={m}>{m} Month{m > 1 ? 's' : ''}</option>
-                              ))}
-                            </TextField>
-                          </Box>
-                        )}
+                        {(activeTemplate?.pricing_frequency?.toLowerCase() === 'monthly' || activeTemplate?.pricing_frequency?.toLowerCase() === 'month') && null}
                       </Grid>
                       <Grid item xs={12} md={6}>
                         <Box sx={{ p: 4, bgcolor: '#1A73E8', borderRadius: 3, color: '#fff', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', boxShadow: '0 10px 30px rgba(26,115,232,0.2)' }}>
@@ -1281,13 +1236,15 @@ const handleFileUpload = (docType, file) => {
                           </AccordionSummary>
                           <AccordionDetails sx={{ bgcolor: '#F8F9FA', borderTop: '1px solid #E8EAED' }}>
                              <Stack spacing={1}>
-                               {Object.entries(activeTemplate?.coverage_limits || {}).map(([k, v]) => (
-                                 <Box key={k} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                   <Typography variant="caption" sx={{ color: '#5F6368', textTransform: 'capitalize' }}>{k.replace(/_/g, ' ')}</Typography>
-                                   <Typography variant="caption" sx={{ fontWeight: 800, color: '#202124' }}>{typeof v === 'number' ? `UGX ${v.toLocaleString()}` : v}</Typography>
+                               {selectedTier?.benefits?.map((benefit, bi) => (
+                                 <Box key={bi} sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                                   <SuccessIcon sx={{ color: '#0F9D58', fontSize: 16, mt: 0.2 }} />
+                                   <Typography variant="caption" sx={{ fontWeight: 600, color: '#3C4043', lineHeight: 1.4 }}>
+                                     {benefit}
+                                   </Typography>
                                  </Box>
                                ))}
-                               {(!activeTemplate?.coverage_limits || Object.keys(activeTemplate.coverage_limits).length === 0) && <Typography variant="caption" sx={{ color: '#BDC1C6', fontStyle: 'italic' }}>Standard coverage benefits apply.</Typography>}
+                               {(!selectedTier?.benefits || selectedTier.benefits.length === 0) && <Typography variant="caption" sx={{ color: '#BDC1C6', fontStyle: 'italic' }}>Standard {selectedTier?.name || 'tier'} coverage benefits apply.</Typography>}
                              </Stack>
                           </AccordionDetails>
                        </Accordion>
@@ -1437,23 +1394,11 @@ const handleFileUpload = (docType, file) => {
                           <Typography variant="body2" sx={{ color: '#5F6368' }}>Product</Typography>
                           <Typography variant="body2" sx={{ fontWeight: 700 }}>{product.name}</Typography>
                         </Box>
-                        {(activeTemplate?.pricing_frequency?.toLowerCase() === 'monthly' || activeTemplate?.pricing_frequency?.toLowerCase() === 'month') && (
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <Typography variant="body2" sx={{ color: '#5F6368' }}>Installments</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 700 }}>{monthsToPay} Month(s)</Typography>
-                          </Box>
-                        )}
+                        {/* Removed installments row */}
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 2, borderTop: '1px dashed #DADCE0' }}>
                           <Typography variant="body1" sx={{ color: '#202124', fontWeight: 600 }}>Total Due Now</Typography>
                           <Typography variant="body1" sx={{ fontWeight: 800, color: '#1A73E8' }}>
-                            UGX {(() => {
-                              const maxCov = Number(createdQuote?.coverage_amount || product.max_coverage) || 0;
-                              const isMonthly = activeTemplate?.pricing_frequency?.toLowerCase() === 'monthly' || activeTemplate?.pricing_frequency?.toLowerCase() === 'month';
-                              if (isMonthly) {
-                                return (Math.ceil(maxCov / ((Number(product.duration_years) || 1) * 12)) * Math.max(1, Number(monthsToPay) || 1)).toLocaleString();
-                              }
-                              return maxCov.toLocaleString();
-                            })()}
+                            UGX {Number(formData.premium || activeTemplate?.base_premium || product?.base_premium || 0).toLocaleString()}
                           </Typography>
                         </Box>
                       </Stack>
