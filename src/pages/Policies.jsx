@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
-import { policyAPI, promotionAPI, formAPI, productAPI } from '../services/api'
+import { policyAPI, promotionAPI, formAPI, productAPI, publicAPI } from '../services/api'
 import { formatCurrency } from '../utils/formatters'
 import {
   Box,
@@ -386,8 +386,7 @@ export default function Policies() {
                 <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Product</TableCell>
                 <TableCell>Premium</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Installments</TableCell>
-                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Next Payment</TableCell>
+
                 <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>Start Date</TableCell>
                 <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>Channel</TableCell>
                 <TableCell align="right">Actions</TableCell>
@@ -478,46 +477,7 @@ export default function Policies() {
                       <TableCell>
                         <StatusBadge status={p.status ? p.status.charAt(0).toUpperCase() + p.status.slice(1) : ''} />
                       </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#202124' }}>
-                              {p.installments_paid || 0}
-                            </Typography>
-                            <Typography sx={{ fontSize: '0.75rem', color: '#9AA0A6' }}>
-                              /
-                            </Typography>
-                            <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#5F6368' }}>
-                              {p.total_installments || 1}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ width: 60, height: 6, bgcolor: '#E8EAED', borderRadius: 0, overflow: 'hidden' }}>
-                            <Box 
-                              sx={{ 
-                                width: `${((p.installments_paid || 0) / (p.total_installments || 1)) * 100}%`, 
-                                height: '100%', 
-                                bgcolor: ((p.installments_paid || 0) / (p.total_installments || 1)) >= 1 ? '#34A853' : '#1A73E8' 
-                              }} 
-                            />
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                        {p.next_payment_date ? (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: p.status === 'active' ? '#1A73E8' : '#5F6368' }}>
-                              {new Date(p.next_payment_date).toLocaleDateString('en-GB')}
-                            </Typography>
-                            {p.status === 'active' && (
-                              <Typography sx={{ fontSize: '0.7rem', color: '#9AA0A6' }}>
-                                ({new Date(p.next_payment_date).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })})
-                              </Typography>
-                            )}
-                          </Box>
-                        ) : (
-                          <Typography sx={{ fontSize: '0.8rem', color: '#9AA0A6' }}>N/A</Typography>
-                        )}
-                      </TableCell>
+
                       <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
                         <Typography sx={{ fontSize: '0.8rem', color: '#5F6368' }}>{p.start_date}</Typography>
                       </TableCell>
@@ -593,20 +553,19 @@ export default function Policies() {
           <MenuItem onClick={() => {
             setAnchorEl(null);
             publicAPI.initiatePesapalPayment(user.organization_id, selected.id, { amount: selected.premium, months_paid: 1 })
-              .then(res => { if(res.data?.redirect_url) window.location.href = res.data.redirect_url })
+              .then(res => { 
+                if(res.data?.redirect_url) window.location.href = res.data.redirect_url 
+                else alert('Payment initialization failed: No redirect URL returned.')
+              })
+              .catch(err => {
+                console.error('Payment error:', err);
+                alert('Failed to initiate payment. Please check your network or PesaPal configuration.');
+              });
           }}>
             <ListItemIcon><PaymentIcon fontSize="small" color="success" /></ListItemIcon>
             <ListItemText primary="Prompt Payment" />
           </MenuItem>
         )}
-        <MenuItem onClick={() => { setAnchorEl(null); handleOpenDocGate(selected) }}>
-          <ListItemIcon><DocsIcon fontSize="small" /></ListItemIcon>
-          <ListItemText primary="Manage Documents" />
-        </MenuItem>
-        <MenuItem onClick={() => setAnchorEl(null)}>
-          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-          <ListItemText primary="Edit Policy" />
-        </MenuItem>
         <Divider />
         <MenuItem onClick={() => setAnchorEl(null)} sx={{ color: '#D93025' }}>
           <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>

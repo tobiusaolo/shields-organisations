@@ -5,7 +5,7 @@ import {
   LinearProgress, Grid, CardContent, Button, Drawer,
   Tabs, Tab, Divider, Avatar, IconButton, TextField,
   InputAdornment, Skeleton, Alert, Stack, Menu, MenuItem,
-  ListItemIcon, ListItemText, Tooltip
+  ListItemIcon, ListItemText, Tooltip, Pagination
 } from '@mui/material';
 import { 
   CheckCircle as CheckCircleIcon,
@@ -41,6 +41,8 @@ export default function PolicyLedger() {
   const [formsLoading, setFormsLoading] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuPolicy, setMenuPolicy] = useState(null);
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 10;
 
   useEffect(() => {
     if (organizationId) {
@@ -110,6 +112,9 @@ export default function PolicyLedger() {
     p.product_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const paginatedPolicies = filteredPolicies.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  const totalItems = filteredPolicies.length;
+
   const stats = {
     total: policies.length,
     paid: policies.filter(p => getPolicyStatus(p).label === 'Paid').length,
@@ -174,7 +179,7 @@ export default function PolicyLedger() {
             size="small"
             fullWidth
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0, bgcolor: '#fff' } }}
             InputProps={{
               startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#90A4AE' }} /></InputAdornment>
@@ -201,13 +206,13 @@ export default function PolicyLedger() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredPolicies.length === 0 ? (
+            {paginatedPolicies.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} sx={{ textAlign: 'center', py: 10 }}>
                   <Typography sx={{ color: '#90A4AE', fontWeight: 600 }}>No policies found matching your criteria.</Typography>
                 </TableCell>
               </TableRow>
-            ) : filteredPolicies.map((policy) => {
+            ) : paginatedPolicies.map((policy) => {
               const status = getPolicyStatus(policy);
               return (
                 <TableRow key={policy.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
@@ -251,6 +256,27 @@ export default function PolicyLedger() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Pagination */}
+      {!loading && totalItems > 0 && (
+        <Paper elevation={0} sx={{
+          px: 3, py: 2, mt: 2,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          border: '1px solid #E8EAED', borderRadius: 0
+        }}>
+          <Typography sx={{ fontSize: '0.8rem', color: '#9AA0A6', fontWeight: 600 }}>
+            Showing {((page - 1) * rowsPerPage) + 1}–{Math.min(page * rowsPerPage, totalItems)} of {totalItems} entries
+          </Typography>
+          <Pagination
+            count={Math.ceil(totalItems / rowsPerPage)}
+            page={page}
+            onChange={(_, v) => setPage(v)}
+            color="primary"
+            size="small"
+            shape="rounded"
+          />
+        </Paper>
+      )}
 
       {/* Policy Detail Drawer */}
       <Drawer
