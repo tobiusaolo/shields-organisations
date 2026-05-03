@@ -60,7 +60,7 @@ export default function Login() {
       const redirectTo = location.state?.redirectTo
       if (redirectTo) {
         navigate(redirectTo)
-      } else if (userData.role === 'client' || userData.role === 'user') {
+      } else if (userData.role === 'client' || userData.role === 'user' || userData.role === 'customer') {
         navigate('/client/products')
       } else {
         navigate('/admin')

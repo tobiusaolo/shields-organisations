@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import { policyAPI, promotionAPI, formAPI, productAPI, publicAPI } from '../services/api'
 import { formatCurrency } from '../utils/formatters'
+import PolicyCertificateGenerator from '../components/PolicyCertificateGenerator'
 import {
   Box,
   Typography,
@@ -118,6 +119,7 @@ export default function Policies() {
 
   // Document Review State
   const [docModalOpen, setDocModalOpen] = useState(false)
+  const certRef = React.useRef(null)
   const [selectedPolicyForDocs, setSelectedPolicyForDocs] = useState(null)
 
   // Policy Details & Q&A State
@@ -549,6 +551,12 @@ export default function Policies() {
           <ListItemIcon><ViewIcon fontSize="small" /></ListItemIcon>
           <ListItemText primary="View Details & Q&A" />
         </MenuItem>
+        
+        <MenuItem onClick={() => { setAnchorEl(null); setTimeout(() => certRef.current?.generate(), 100) }}>
+          <ListItemIcon><DownloadIcon fontSize="small" color="primary" /></ListItemIcon>
+          <ListItemText primary="Download Certificate" />
+        </MenuItem>
+
         {selected?.status === 'pending' && (
           <MenuItem onClick={() => {
             setAnchorEl(null);
@@ -994,56 +1002,77 @@ export default function Policies() {
                           )}
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             {(form.fields || []).map((field, fli) => {
+                              const context = selectedPolicy?.context || {};
+                              const fieldValue = context[field.field_key] || context[field.label] || 
+                                                context[field.field_key?.toLowerCase()] || context[field.label?.toLowerCase()];
+                              
                               if (field.field_type === 'section') return (
                                 <Typography key={fli} sx={{ fontWeight: 900, fontSize: '0.78rem', color: '#1A237E', textTransform: 'uppercase', letterSpacing: 0.8, mt: 1, pt: 1, borderTop: '1px solid #E8EAED' }}>{field.label}</Typography>
                               )
-                              if (field.field_type === 'table') return (
-                                <Box key={fli}>
-                                  <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', mb: 1, color: '#202124' }}>{field.label}</Typography>
-                                  <Box sx={{ overflow: 'auto', borderRadius: 0, border: '1px solid #E8EAED' }}>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                                      <thead>
-                                        <tr style={{ background: '#F8F9FE' }}>
-                                          {(field.columns || []).map((col, ci) => (
-                                            <th key={ci} style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'left', borderBottom: '1px solid #E8EAED', color: '#5F6368' }}>{col.label}</th>
+                              
+                              if (field.field_type === 'table') {
+                                const tableData = (Array.isArray(fieldValue) && fieldValue.length > 0) ? fieldValue : (field.prefill_rows || []);
+                                return (
+                                  <Box key={fli}>
+                                    <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', mb: 1, color: '#202124' }}>{field.label}</Typography>
+                                    <Box sx={{ overflow: 'auto', borderRadius: 0, border: '1px solid #E8EAED' }}>
+                                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                                        <thead>
+                                          <tr style={{ background: '#F8F9FE' }}>
+                                            {(field.columns || []).map((col, ci) => (
+                                              <th key={ci} style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'left', borderBottom: '1px solid #E8EAED', color: '#5F6368' }}>{col.label}</th>
+                                            ))}
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {tableData.map((row, ri) => (
+                                            <tr key={ri} style={{ borderBottom: '1px solid #F1F3F4' }}>
+                                              {(field.columns || []).map((col, ci) => {
+                                                const val = row[col.key] || row[col.key?.toLowerCase()] || row[col.label] || <span style={{ color: '#BDC1C6' }}>—</span>;
+                                                return <td key={ci} style={{ padding: '8px 12px' }}>{val}</td>;
+                                              })}
+                                            </tr>
                                           ))}
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {(field.prefill_rows || []).map((row, ri) => (
-                                          <tr key={ri} style={{ borderBottom: '1px solid #F1F3F4' }}>
-                                            {(field.columns || []).map((col, ci) => (
-                                              <td key={ci} style={{ padding: '8px 12px' }}>{row[col.key] || <span style={{ color: '#BDC1C6' }}>—</span>}</td>
-                                            ))}
-                                          </tr>
-                                        ))}
-                                        {(field.prefill_rows || []).length === 0 && Array.from({ length: field.min_rows || 1 }).map((_, ri) => (
-                                          <tr key={ri}>
-                                            {(field.columns || []).map((col, ci) => (
-                                              <td key={ci} style={{ padding: '8px 12px', color: '#BDC1C6', fontStyle: 'italic' }}>Enter {col.label}...</td>
-                                            ))}
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
+                                          {tableData.length === 0 && Array.from({ length: field.min_rows || 1 }).map((_, ri) => (
+                                            <tr key={ri}>
+                                              {(field.columns || []).map((col, ci) => (
+                                                <td key={ci} style={{ padding: '8px 12px', color: '#BDC1C6', fontStyle: 'italic' }}>Enter {col.label}...</td>
+                                              ))}
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </Box>
+                                  </Box>
+                                );
+                              }
+                              
+                              if (field.field_type === 'checkbox') return (
+                                <Box key={fli} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1.5, borderBottom: '1px solid #F1F3F4' }}>
+                                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 600 }}>{field.label}</Typography>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography sx={{ fontSize: '0.82rem', fontWeight: 800, color: fieldValue ? '#1E8E3E' : '#5F6368' }}>
+                                      {fieldValue ? '☑ YES' : '☐ NO'}
+                                    </Typography>
+                                    <Chip label={field.is_required ? 'Required' : 'Optional'} size="small" sx={{ height: 18, fontSize: '0.65rem' }} color={field.is_required ? 'warning' : 'default'} />
                                   </Box>
                                 </Box>
                               )
-                              if (field.field_type === 'checkbox') return (
-                                <Box key={fli} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #F1F3F4' }}>
-                                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 600 }}>{field.label}</Typography>
-                                  <Chip label={field.is_required ? 'Required' : 'Optional'} size="small" sx={{ height: 18, fontSize: '0.65rem' }} color={field.is_required ? 'warning' : 'default'} />
-                                </Box>
-                              )
+                              
                               return (
-                                <Box key={fli} sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #F1F3F4' }}>
+                                <Box key={fli} sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', py: 1.5, borderBottom: '1px solid #F1F3F4' }}>
                                   <Box>
                                     <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#202124' }}>{field.label}</Typography>
                                     {field.help_text && <Typography sx={{ fontSize: '0.72rem', color: '#9AA0A6', mt: 0.3 }}>{field.help_text}</Typography>}
                                   </Box>
-                                  <Box sx={{ display: 'flex', gap: 0.8, flexShrink: 0, ml: 2 }}>
-                                    <Chip label={field.field_type} size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, bgcolor: '#F1F3F4', color: '#5F6368' }} />
-                                    {field.is_required && <Chip label="Required" size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }} />}
+                                  <Box sx={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                                    <Typography sx={{ fontSize: '0.88rem', fontWeight: 800, color: fieldValue ? '#1A237E' : '#BDC1C6' }}>
+                                      {fieldValue !== undefined && fieldValue !== null ? String(fieldValue) : 'Not Provided'}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', gap: 0.8 }}>
+                                      <Chip label={field.field_type} size="small" sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700, bgcolor: '#F1F3F4', color: '#5F6368' }} />
+                                      {field.is_required && <Chip label="Required" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700 }} />}
+                                    </Box>
                                   </Box>
                                 </Box>
                               )
@@ -1157,6 +1186,8 @@ export default function Policies() {
           </Box>
         </Box>
       </Drawer>
+
+      <PolicyCertificateGenerator ref={certRef} policy={selected} user={user} />
     </Box>
   )
 }

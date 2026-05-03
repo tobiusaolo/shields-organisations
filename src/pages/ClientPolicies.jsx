@@ -23,6 +23,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { policyAPI, publicAPI, productAPI, formAPI } from '../services/api'
+import PolicyCertificateGenerator from '../components/PolicyCertificateGenerator'
+import { Download as DownloadIcon } from '@mui/icons-material'
 
 export default function ClientPolicies() {
   const navigate = useNavigate()
@@ -38,14 +40,15 @@ export default function ClientPolicies() {
   const [page, setPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [deletingId, setDeletingId] = useState(null)
+  const certRef = React.useRef(null)
 
   // NEW: Fetch full product hierarchy for the detailed drawer
   const { data: productHierarchy, isLoading: isLoadingHierarchy } = useQuery({
-    queryKey: ['product-hierarchy', viewPolicy?.product_id, user?.organization_id],
+    queryKey: ['product-hierarchy', viewPolicy?.product_id, viewPolicy?.organization_id],
     queryFn: async () => {
-      if (!viewPolicy?.product_id || !user?.organization_id) return null
+      if (!viewPolicy?.product_id || !viewPolicy?.organization_id) return null
       
-      const orgId = user.organization_id
+      const orgId = viewPolicy.organization_id
       const productId = viewPolicy.product_id
       
       // 1. Get templates
@@ -92,7 +95,9 @@ export default function ClientPolicies() {
 
   const handleMenuClose = () => {
     setMenuAnchor(null)
-    setMenuPolicy(null)
+    // We DON'T clear menuPolicy here because the certificate generator 
+    // might still need it for a few milliseconds after the menu closes.
+    // It will be overwritten when the next menu is opened.
   }
 
   const handlePayNow = async () => {
@@ -126,7 +131,7 @@ export default function ClientPolicies() {
     }).then((result) => {
       if (result.isConfirmed) {
         setSelectedPolicy(menuPolicy)
-        deletePolicyMutation.mutate(menuPolicy.id)
+        deletePolicyMutation.mutate({ policyId: menuPolicy.id, orgId: menuPolicy.organization_id })
         handleMenuClose()
       }
     })
@@ -145,10 +150,10 @@ export default function ClientPolicies() {
   }
 
   const deletePolicyMutation = useMutation({
-    mutationFn: async (policyId) => {
-      await policyAPI.deletePolicy(user.organization_id, policyId)
+    mutationFn: async ({ policyId, orgId }) => {
+      await policyAPI.deletePolicy(orgId, policyId)
     },
-    onSuccess: (_, policyId) => {
+    onSuccess: (_, { policyId }) => {
       setDeletingId(policyId)
       // Small delay to allow the animation to finish before query invalidation removes it from DOM
       setTimeout(() => {
@@ -173,23 +178,22 @@ export default function ClientPolicies() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['my-policies', user?.id, page],
     queryFn: async () => {
-      if (!user?.organization_id) return { items: [], total: 0 }
       try {
-        const res = await policyAPI.getPolicies(user.organization_id, { 
-          policy_holder_id: user.id,
-          page,
-          limit: rowsPerPage
-        })
+        const res = await policyAPI.getMyAllPolicies()
+        const allItems = res.data || []
+        
+        // Manual pagination on client side if needed, or just return all
+        // For now, returning all as standard clients won't have thousands of policies
         return {
-          items: res.data.items || [],
-          total: res.data.total || (res.data.items?.length || 0)
+          items: allItems,
+          total: allItems.length
         }
       } catch (err) {
         console.error("Failed to fetch policies:", err)
         throw err
       }
     },
-    enabled: !!user?.id && !!user?.organization_id
+    enabled: !!user?.id
   })
 
   // NEW: Universal Label Mapper for legacy or un-enriched data
@@ -413,6 +417,11 @@ export default function ClientPolicies() {
       >
         <MenuItem onClick={handleViewDetails} sx={{ fontWeight: 600 }}>
           View Details
+        </MenuItem>
+
+        <MenuItem onClick={() => { handleMenuClose(); setTimeout(() => certRef.current?.generate(), 100) }} sx={{ fontWeight: 600 }}>
+          <DownloadIcon fontSize="small" sx={{ mr: 1, color: '#1A73E8' }} />
+          Download Certificate
         </MenuItem>
 
         {menuPolicy?.status === 'active' && (
@@ -756,8 +765,9 @@ export default function ClientPolicies() {
             </Button>
           </Stack>
         </Box>
-      </Box>
-    </Drawer>
+        </Box>
+      </Drawer>
+      <PolicyCertificateGenerator ref={certRef} policy={menuPolicy} user={user} />
     </Box>
   )
 }

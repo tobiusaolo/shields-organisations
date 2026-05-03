@@ -113,6 +113,7 @@ export default function KYC() {
     website: '',
     address: '',
     contact_phone: '',
+    contact_email: '',
     logo: null, // Base64
     documents: [], // List of {name: str, content: str}
     // Payment Configuration
@@ -146,12 +147,18 @@ export default function KYC() {
          console.log('Prefilled tax_id:', user.organization_tax_id)
        }
        if (user?.organization_contact_phone) {
-         setForm(f => ({ ...f, contact_phone: user.organization_contact_phone }))
-         console.log('Prefilled contact_phone:', user.organization_contact_phone)
-       } else {
-         console.log('organization_contact_phone not found in user data')
-       }
-       if (user?.organization_address) {
+        setForm(f => ({ ...f, contact_phone: user.organization_contact_phone }))
+        console.log('Prefilled contact_phone:', user.organization_contact_phone)
+      } else {
+        console.log('organization_contact_phone not found in user data')
+      }
+      if (user?.organization_email || user?.email) {
+        setForm(f => ({ ...f, contact_email: user.organization_email || user?.email }))
+        console.log('Prefilled contact_email:', user.organization_email || user?.email)
+      } else {
+        console.log('organization_email not found in user data')
+      }
+      if (user?.organization_address) {
          setForm(f => ({ ...f, address: user.organization_address }))
          console.log('Prefilled address:', user.organization_address)
        } else {
@@ -222,8 +229,8 @@ export default function KYC() {
 
   const handleNext = () => {
     setError('')
-    if (activeStep === 0 && (!form.registration_name || !form.tax_id || !form.logo || !form.address || !form.contact_phone)) {
-      setError('Official name, Tax ID, Company Logo, Registered Address, and Contact Phone are required.')
+    if (activeStep === 0 && (!form.registration_name || !form.tax_id || !form.logo || !form.address || !form.contact_phone || !form.contact_email)) {
+      setError('Official name, Tax ID, Company Logo, Registered Address, Contact Phone, and Contact Email are required.')
       return
     }
     if (activeStep === 1 && form.documents.length === 0) {
@@ -419,6 +426,9 @@ export default function KYC() {
             </Grid>
             <Grid item xs={12} sm={6}>
                 <TextField fullWidth label="Contact Phone *" value={form.contact_phone} onChange={(e) => update('contact_phone', e.target.value)} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+                <TextField fullWidth label="Contact Email *" type="email" value={form.contact_email} onChange={(e) => update('contact_email', e.target.value)} />
             </Grid>
             <Grid item xs={12}>
                 <TextField fullWidth multiline rows={2} label="Registered Business Address *" value={form.address} onChange={(e) => update('address', e.target.value)} />
@@ -619,7 +629,8 @@ export default function KYC() {
                     </Box>
                     <Divider sx={{ my: 2 }} />
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                        <Typography sx={{ fontSize: '0.8rem' }}><b>Contact:</b> {form.contact_phone}</Typography>
+                        <Typography sx={{ fontSize: '0.8rem' }}><b>Phone:</b> {form.contact_phone}</Typography>
+                        <Typography sx={{ fontSize: '0.8rem' }}><b>Email:</b> {form.contact_email}</Typography>
                         <Typography sx={{ fontSize: '0.8rem' }}><b>Website:</b> {form.website || 'N/A'}</Typography>
                         <Typography sx={{ fontSize: '0.8rem' }}><b>Address:</b> {form.address}</Typography>
                     </Box>

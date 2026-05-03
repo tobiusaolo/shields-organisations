@@ -128,6 +128,7 @@ export const policyAPI = {
   getPolicyQuestions: (policyId) => api.get(`/policies/${policyId}/questions`),
   answerPolicyQuestion: (policyId, questionId, data) => api.post(`/policies/${policyId}/questions/${questionId}/answer`, data),
   getOrganizationCustomerAccounts: (orgId) => api.get(`/policies/organizations/${orgId}/customer-accounts`),
+  getMyAllPolicies: () => api.get('/policies/me'),
 }
 
 export const claimAPI = {
@@ -233,6 +234,7 @@ export const publicAPI = {
   getPricingTiersPublic: (orgId, templateId) => api.get(`/public/organizations/${orgId}/pricing-tiers`, { params: { product_template_id: templateId } }),
   getMyPolicies: () => api.get('/public/me/policies'),
   getMyClaims: () => api.get('/public/me/claims'),
+  getPolicyCertificateData: (policyId) => api.get(`/public/policies/${policyId}/certificate-data`),
 }
 
 export const promotionAPI = {
